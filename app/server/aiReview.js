@@ -33,9 +33,88 @@ const UNSUBSTANTIATED_CLAIM_PHRASES = [
   "cannot lose",
 ];
 
+// FCA Consumer Duty (PS22/9) checks, kept deliberately separate from the
+// PS23/6 financial-promotions checks above — Consumer Duty is a broader,
+// outcomes-based framework and the prep-guide interview explicitly asks how
+// it interacts with financial promotions. Same rule-based-mock honesty
+// contract as the rest of this file: keyword heuristics only, indicative,
+// not a substitute for a real Consumer Duty assessment.
+const TARGET_MARKET_PHRASES = [
+  "professional investor",
+  "professional investors",
+  "experienced investor",
+  "experienced investors",
+  "may not be suitable",
+  "not suitable for",
+  "consider your circumstances",
+  "if you are unsure",
+  "target market",
+];
+
+const COST_DISCLOSURE_PHRASES = ["fee", "fees", "charge", "charges", "cost", "costs", "commission"];
+
+const MONETARY_BENEFIT_PHRASES = [
+  "apy",
+  "yield",
+  "reward",
+  "rewards",
+  "return",
+  "returns",
+  "bonus",
+  "interest rate",
+  "earn up to",
+];
+
+const JARGON_PHRASES = ["apy", "staking", "smart contract", "defi", "liquidity pool", "gas fee", "yield farming", "on-chain"];
+
+const PLAIN_LANGUAGE_MARKERS = ["in simple terms", "in plain terms", "this means", "put simply", "to put it simply"];
+
 function findMatches(text, phrases) {
   const lower = text.toLowerCase();
   return phrases.filter((p) => lower.includes(p));
+}
+
+function checkConsumerDuty(text) {
+  const lower = text.toLowerCase();
+
+  const hasTargetMarket = TARGET_MARKET_PHRASES.some((p) => lower.includes(p));
+  const productsAndServices = {
+    pass: hasTargetMarket,
+    explanation: hasTargetMarket
+      ? "Copy identifies a target market or suitability context."
+      : "No target-market or suitability framing detected — the Products & Services outcome expects a promotion to be understandable in the context of its intended audience.",
+  };
+
+  const mentionsBenefit = MONETARY_BENEFIT_PHRASES.some((p) => lower.includes(p));
+  const mentionsCost = COST_DISCLOSURE_PHRASES.some((p) => lower.includes(p));
+  const priceAndValue = {
+    pass: !mentionsBenefit || mentionsCost,
+    explanation: !mentionsBenefit
+      ? "No monetary benefit claims detected that would require a cost disclosure."
+      : mentionsCost
+        ? "Monetary benefit claims are paired with cost/fee disclosure language."
+        : "Monetary benefit claims (e.g. returns, rewards, APY) aren't paired with any visible cost or fee disclosure — the Price & Value outcome requires customers to be able to judge fair value.",
+  };
+
+  const jargonMatches = JARGON_PHRASES.filter((p) => lower.includes(p));
+  const hasPlainLanguageMarker = PLAIN_LANGUAGE_MARKERS.some((p) => lower.includes(p));
+  const consumerUnderstanding = {
+    pass: jargonMatches.length === 0 || hasPlainLanguageMarker,
+    explanation:
+      jargonMatches.length === 0
+        ? "No unexplained technical jargon detected."
+        : hasPlainLanguageMarker
+          ? `Technical terms detected (${jargonMatches.join(", ")}) but the copy includes plain-language framing.`
+          : `Technical terms detected (${jargonMatches.join(", ")}) with no plain-language explanation — the Consumer Understanding outcome requires communications a retail customer can actually follow.`,
+  };
+
+  const consumerSupport = {
+    pass: null,
+    explanation:
+      "Not assessable from promotion text alone — the Consumer Support outcome is evaluated at the process level (e.g. post-sale support pathways), not per-promotion.",
+  };
+
+  return { productsAndServices, priceAndValue, consumerUnderstanding, consumerSupport };
 }
 
 export function runFinancialPromotionsReview(copyText) {
@@ -48,11 +127,20 @@ export function runFinancialPromotionsReview(copyText) {
   const bannedIncentivePass = bannedIncentiveMatches.length === 0;
 
   const flaggedClaims = findMatches(text, UNSUBSTANTIATED_CLAIM_PHRASES);
+  const consumerDutyCheck = checkConsumerDuty(text);
+  // Consumer Support is always null/N/A (not assessable per-promotion, see
+  // checkConsumerDuty) — only the three assessable outcomes count toward
+  // overall status.
+  const consumerDutyFails = [
+    consumerDutyCheck.productsAndServices,
+    consumerDutyCheck.priceAndValue,
+    consumerDutyCheck.consumerUnderstanding,
+  ].some((outcome) => !outcome.pass);
 
   let overallStatus;
   if (!bannedIncentivePass) {
     overallStatus = "REJECT";
-  } else if (!riskWarningPass || flaggedClaims.length > 0) {
+  } else if (!riskWarningPass || flaggedClaims.length > 0 || consumerDutyFails) {
     overallStatus = "REVISION REQUIRED";
   } else {
     overallStatus = "PASS";
@@ -74,6 +162,15 @@ export function runFinancialPromotionsReview(copyText) {
       `Balance or remove unsubstantiated claims (matched: ${flaggedClaims.join(", ")}) with a clear risk disclosure, or provide substantiation.`
     );
   }
+  if (!consumerDutyCheck.productsAndServices.pass) {
+    redlineNotes.push("Add a target-market or suitability statement to satisfy the Consumer Duty Products & Services outcome.");
+  }
+  if (!consumerDutyCheck.priceAndValue.pass) {
+    redlineNotes.push("Pair any yield/reward/bonus claim with visible cost or fee disclosure to satisfy the Consumer Duty Price & Value outcome.");
+  }
+  if (!consumerDutyCheck.consumerUnderstanding.pass) {
+    redlineNotes.push("Plain-language any technical terms to satisfy the Consumer Duty Consumer Understanding outcome.");
+  }
   if (redlineNotes.length === 0) {
     redlineNotes.push("No redline needed — copy passes the automated checks.");
   }
@@ -94,6 +191,7 @@ export function runFinancialPromotionsReview(copyText) {
         : `Detected potentially banned incentive language: ${bannedIncentiveMatches.join(", ")}.`,
     },
     flaggedClaims,
+    consumerDutyCheck,
     recommendedRedline: redlineNotes.join(" "),
   };
 }

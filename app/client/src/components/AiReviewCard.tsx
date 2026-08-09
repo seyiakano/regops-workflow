@@ -1,4 +1,21 @@
-import type { AiReview } from "../types";
+import type { AiReview, ConsumerDutyOutcome } from "../types";
+
+const CONSUMER_DUTY_LABELS: Record<string, string> = {
+  productsAndServices: "Products & Services",
+  priceAndValue: "Price & Value",
+  consumerUnderstanding: "Consumer Understanding",
+  consumerSupport: "Consumer Support",
+};
+
+function outcomeLabel(outcome: ConsumerDutyOutcome): string {
+  if (outcome.pass === null) return "N/A";
+  return outcome.pass ? "Pass" : "Fail";
+}
+
+function outcomeClass(outcome: ConsumerDutyOutcome): string {
+  if (outcome.pass === null) return "na";
+  return outcome.pass ? "pass" : "fail";
+}
 
 function FinancialPromotionsFields({ output }: { output: Extract<AiReview, { review_type: "financial_promotions" }>["output"] }) {
   return (
@@ -13,6 +30,23 @@ function FinancialPromotionsFields({ output }: { output: Extract<AiReview, { rev
       </dd>
       <dt>Flagged Words/Claims</dt>
       <dd>{output.flaggedClaims.length > 0 ? output.flaggedClaims.join(", ") : "None"}</dd>
+      <dt>Consumer Duty Outcomes</dt>
+      <dd>
+        {output.consumerDutyCheck ? (
+          <ul className="consumer-duty-list">
+            {Object.entries(output.consumerDutyCheck).map(([key, outcome]) => (
+              <li key={key}>
+                <span className={`badge badge-consumer-duty-${outcomeClass(outcome)}`}>
+                  {CONSUMER_DUTY_LABELS[key] ?? key}: {outcomeLabel(outcome)}
+                </span>
+                <span className="muted"> — {outcome.explanation}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <span className="muted">Not assessed — this review predates the Consumer Duty check. Re-run AI Review to include it.</span>
+        )}
+      </dd>
       <dt>Recommended Redline Copy</dt>
       <dd>{output.recommendedRedline}</dd>
     </>

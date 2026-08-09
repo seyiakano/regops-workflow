@@ -534,6 +534,34 @@ input:disabled {
   color: var(--accent);
 }
 
+.badge-consumer-duty-pass {
+  background: var(--success-bg);
+  color: var(--success);
+}
+.badge-consumer-duty-fail {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.badge-consumer-duty-na {
+  background: var(--border);
+  color: var(--text);
+}
+
+.consumer-duty-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.consumer-duty-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .ai-oversight-note {
   font-size: 12.5px;
   font-style: italic;

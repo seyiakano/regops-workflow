@@ -67,12 +67,28 @@ export interface AuditLogEntry {
   created_at: string;
 }
 
+export interface ConsumerDutyOutcome {
+  pass: boolean | null;
+  explanation: string;
+}
+
+export interface ConsumerDutyCheck {
+  productsAndServices: ConsumerDutyOutcome;
+  priceAndValue: ConsumerDutyOutcome;
+  consumerUnderstanding: ConsumerDutyOutcome;
+  consumerSupport: ConsumerDutyOutcome;
+}
+
 export interface FinancialPromotionReviewOutput {
   mock: boolean;
   overallStatus: "PASS" | "REJECT" | "REVISION REQUIRED";
   riskWarningCheck: { pass: boolean; explanation: string };
   bannedIncentiveCheck: { pass: boolean; explanation: string };
   flaggedClaims: string[];
+  // Optional: reviews stored before this check existed won't have it — see
+  // AiReviewCard's guarded render rather than assuming every stored record
+  // matches the current output shape.
+  consumerDutyCheck?: ConsumerDutyCheck;
   recommendedRedline: string;
 }
 
