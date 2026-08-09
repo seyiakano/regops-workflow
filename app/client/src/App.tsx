@@ -11,6 +11,7 @@ import { UserMenu } from "./components/UserMenu";
 import { NotificationBell } from "./components/NotificationBell";
 import { LaunchReadinessBoard } from "./components/LaunchReadinessBoard";
 import { LaunchItemDetail } from "./components/LaunchItemDetail";
+import { BoardPackPage } from "./components/BoardPackPage";
 import { useAuth } from "./auth";
 
 type View =
@@ -21,7 +22,8 @@ type View =
   | { name: "briefing" }
   | { name: "audit" }
   | { name: "governance" }
-  | { name: "launch-item"; id: string };
+  | { name: "launch-item"; id: string }
+  | { name: "board-pack" };
 
 function App() {
   const { user, loading } = useAuth();
@@ -80,7 +82,7 @@ function App() {
             </button>
           )}
           <button
-            className={view.name === "briefing" ? "nav-active" : ""}
+            className={view.name === "briefing" || view.name === "board-pack" ? "nav-active" : ""}
             onClick={() => setView({ name: "briefing" })}
           >
             Executive Briefing
@@ -111,7 +113,10 @@ function App() {
             onBack={() => setView(view.from === "reviewer" ? { name: "reviewer" } : { name: "dashboard" })}
           />
         )}
-        {view.name === "briefing" && <ExecutiveBriefingPage />}
+        {view.name === "briefing" && (
+          <ExecutiveBriefingPage onExportBoardPack={() => setView({ name: "board-pack" })} />
+        )}
+        {view.name === "board-pack" && <BoardPackPage onBack={() => setView({ name: "briefing" })} />}
         {view.name === "audit" && <AuditTrailPage />}
       </main>
     </div>

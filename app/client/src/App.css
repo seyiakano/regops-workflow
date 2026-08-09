@@ -1120,3 +1120,137 @@ input:disabled {
 .gate-action-row label {
   flex: 1;
 }
+
+/* ---- Board pack export (print-ready, deliberately light-mode-only) ---- */
+
+.board-pack-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 820px;
+  margin: 0 auto 16px;
+}
+
+.board-pack-doc {
+  background: #ffffff;
+  color: #1a1a1a;
+  border: 1px solid #d8d8d8;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.board-pack-header {
+  border-bottom: 3px solid #5b3df0;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+.board-pack-header h1 {
+  font-size: 22px;
+  margin: 0 0 4px;
+  color: #111;
+}
+.board-pack-header p {
+  color: #555;
+  font-size: 13px;
+  margin: 0;
+}
+
+.board-pack-section {
+  margin-bottom: 28px;
+}
+.board-pack-section h2 {
+  font-size: 15px;
+  color: #111;
+  border-bottom: 1px solid #e2e2e2;
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+.board-pack-section h3 {
+  font-size: 13px;
+  color: #333;
+  margin: 14px 0 6px;
+}
+.board-pack-section p,
+.board-pack-section li {
+  font-size: 13px;
+  color: #333;
+  line-height: 1.5;
+}
+
+.board-pack-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin: 10px 0;
+}
+.board-pack-metric {
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.board-pack-metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111;
+  display: block;
+}
+.board-pack-metric-label {
+  font-size: 11.5px;
+  color: #666;
+}
+
+.board-pack-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.board-pack-table th,
+.board-pack-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid #e2e2e2;
+  color: #222;
+}
+.board-pack-table th {
+  color: #555;
+  font-weight: 600;
+}
+
+.board-pack-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.board-pack-badge-ready {
+  background: #e3f6e8;
+  color: #1c8a4b;
+}
+.board-pack-badge-blocked {
+  background: #fbe3e3;
+  color: #c0342c;
+}
+.board-pack-badge-in_progress {
+  background: #fdf1dd;
+  color: #9a6a12;
+}
+
+@media print {
+  .app-header,
+  .no-print {
+    display: none !important;
+  }
+  .app-shell {
+    max-width: 100%;
+    padding: 0;
+  }
+  .board-pack-doc {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    max-width: 100%;
+  }
+}

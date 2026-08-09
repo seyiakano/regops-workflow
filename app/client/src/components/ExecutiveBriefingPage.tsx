@@ -3,7 +3,7 @@ import { api } from "../api";
 import type { ExecutiveBriefing } from "../types";
 import { ExecutiveDashboard } from "./ExecutiveDashboard";
 
-export function ExecutiveBriefingPage() {
+export function ExecutiveBriefingPage({ onExportBoardPack }: { onExportBoardPack: () => void }) {
   const [notes, setNotes] = useState("");
   const [briefing, setBriefing] = useState<ExecutiveBriefing | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -26,6 +26,9 @@ export function ExecutiveBriefingPage() {
       <section className="panel">
         <div className="panel-header">
           <h2>Executive Dashboard</h2>
+          <button className="btn-primary" onClick={onExportBoardPack}>
+            Export Board Pack
+          </button>
         </div>
         <p className="muted">
           Live view of everything that's moved through the workflow — click any bar or slice below to drill into the

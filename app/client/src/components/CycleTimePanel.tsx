@@ -3,7 +3,7 @@ import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, 
 import { api } from "../api";
 import type { CycleTimeMetrics } from "../types";
 
-function formatHours(h: number): string {
+export function formatHours(h: number): string {
   if (h < 1) return `${Math.max(1, Math.round(h * 60))}m`;
   if (h < 48) return `${h.toFixed(1)}h`;
   return `${(h / 24).toFixed(1)}d`;
