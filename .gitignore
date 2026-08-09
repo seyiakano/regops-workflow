@@ -2,3 +2,4 @@ node_modules/
 app/server/data.sqlite*
 app/server/uploads/
 .env
+.vercel

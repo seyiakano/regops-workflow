@@ -3,7 +3,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const db = new Database(path.join(__dirname, "data.sqlite"));
+// Vercel's serverless functions get a fresh, read-only filesystem per cold
+// start except /tmp — writing there means the DB (and every login/case/audit
+// row) resets whenever the function cold-starts. Fine for a demo deploy,
+// not for real persistence — see project memory before treating this app's
+// Vercel deploy as anything but a clickable demo.
+const dbPath = process.env.VERCEL ? "/tmp/data.sqlite" : path.join(__dirname, "data.sqlite");
+export const db = new Database(dbPath);
 
 db.pragma("journal_mode = WAL");
 

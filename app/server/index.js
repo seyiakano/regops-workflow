@@ -19,7 +19,9 @@ seedTemplates();
 seedUsers();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOADS_DIR = path.join(__dirname, "uploads");
+// Same read-only-filesystem constraint as db.js — uploaded files land in
+// /tmp on Vercel and won't survive a cold start.
+const UPLOADS_DIR = process.env.VERCEL ? "/tmp/uploads" : path.join(__dirname, "uploads");
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const upload = multer({
@@ -468,7 +470,14 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-const PORT = process.env.NODE_ENV === "production" ? process.env.PORT || 4001 : 4001;
-app.listen(PORT, () => {
-  console.log(`RegOps workflow API listening on http://localhost:${PORT}`);
-});
+// Vercel imports this file as a serverless function and calls the exported
+// app directly (Express's app is itself a valid (req, res) handler) — it
+// must NOT also bind a port, so the local listener is guarded out.
+if (!process.env.VERCEL) {
+  const PORT = process.env.NODE_ENV === "production" ? process.env.PORT || 4001 : 4001;
+  app.listen(PORT, () => {
+    console.log(`RegOps workflow API listening on http://localhost:${PORT}`);
+  });
+}
+
+export default app;
