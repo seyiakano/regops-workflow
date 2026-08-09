@@ -186,6 +186,35 @@ export interface CycleTimeMetrics {
   breaches: CycleTimeBreach[];
 }
 
+export type LaunchGateStatus = "pending" | "approved" | "blocked";
+export type LaunchItemStatus = "in_progress" | "ready" | "blocked";
+
+export interface LaunchGate {
+  id: string;
+  launch_item_id: string;
+  gate_name: string;
+  approver_role: string;
+  status: LaunchGateStatus;
+  actor: string | null;
+  comment: string | null;
+  decided_at: string | null;
+}
+
+export interface LaunchItem {
+  id: string;
+  product_name: string;
+  description: string | null;
+  target_launch_date: string;
+  submitted_by: string;
+  status: LaunchItemStatus;
+  created_at: string;
+  updated_at: string;
+  gates: LaunchGate[];
+  gates_total: number;
+  gates_approved: number;
+  days_until_launch: number;
+}
+
 export interface ExecutiveBriefing {
   generatedAt: string;
   executiveSummary: string[];

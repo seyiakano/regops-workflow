@@ -14,6 +14,7 @@ import type {
   AuditResult,
   TrendResult,
   CycleTimeMetrics,
+  LaunchItem,
 } from "./types";
 import { getToken, clearToken, broadcastUnauthorized } from "./tokenStore";
 
@@ -98,6 +99,16 @@ export const api = {
   getStats: (period: string) => request<CaseStats>(`/api/stats?period=${period}`),
   getTrend: (days = 30) => request<TrendResult>(`/api/stats/trend?days=${days}`),
   getCycleTime: (slaHours = 48) => request<CycleTimeMetrics>(`/api/stats/cycle-time?slaHours=${slaHours}`),
+
+  listLaunchItems: () => request<LaunchItem[]>("/api/launch-items"),
+  getLaunchItem: (id: string) => request<LaunchItem>(`/api/launch-items/${id}`),
+  createLaunchItem: (data: { product_name: string; description?: string; target_launch_date: string }) =>
+    request<LaunchItem>("/api/launch-items", { method: "POST", body: JSON.stringify(data) }),
+  actionLaunchGate: (launchItemId: string, gateId: string, data: { action: "approved" | "blocked"; comment?: string }) =>
+    request<LaunchItem>(`/api/launch-items/${launchItemId}/gates/${gateId}/action`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   getNotificationCount: () => request<{ count: number }>("/api/notifications/count"),
 
   getAudit: (filters: { from?: string; to?: string; template_id?: string; action?: string; q?: string }) => {

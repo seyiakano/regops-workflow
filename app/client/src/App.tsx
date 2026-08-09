@@ -9,6 +9,8 @@ import { AuditTrailPage } from "./components/AuditTrailPage";
 import { LoginPage } from "./components/LoginPage";
 import { UserMenu } from "./components/UserMenu";
 import { NotificationBell } from "./components/NotificationBell";
+import { LaunchReadinessBoard } from "./components/LaunchReadinessBoard";
+import { LaunchItemDetail } from "./components/LaunchItemDetail";
 import { useAuth } from "./auth";
 
 type View =
@@ -17,7 +19,9 @@ type View =
   | { name: "templates" }
   | { name: "instance"; id: string; from: "dashboard" | "reviewer" }
   | { name: "briefing" }
-  | { name: "audit" };
+  | { name: "audit" }
+  | { name: "governance" }
+  | { name: "launch-item"; id: string };
 
 function App() {
   const { user, loading } = useAuth();
@@ -61,6 +65,12 @@ function App() {
           >
             Reviewer Board
           </button>
+          <button
+            className={view.name === "governance" || view.name === "launch-item" ? "nav-active" : ""}
+            onClick={() => setView({ name: "governance" })}
+          >
+            Product Governance
+          </button>
           {user.is_admin && (
             <button
               className={view.name === "templates" ? "nav-active" : ""}
@@ -87,6 +97,12 @@ function App() {
         )}
         {view.name === "reviewer" && (
           <ReviewerBoard onOpenInstance={(id) => setView({ name: "instance", id, from: "reviewer" })} />
+        )}
+        {view.name === "governance" && (
+          <LaunchReadinessBoard onOpenItem={(id) => setView({ name: "launch-item", id })} />
+        )}
+        {view.name === "launch-item" && (
+          <LaunchItemDetail id={view.id} onBack={() => setView({ name: "governance" })} />
         )}
         {view.name === "templates" && user.is_admin && <TemplatesPage />}
         {view.name === "instance" && (

@@ -88,4 +88,32 @@ db.exec(`
     created_at TEXT NOT NULL,
     FOREIGN KEY (instance_id) REFERENCES instances(id)
   );
+
+  -- Product Governance / launch readiness — deliberately a SEPARATE shape
+  -- from workflow_templates/instances: readiness gates are checked off in
+  -- parallel by whichever role owns each one (not a single-file sequential
+  -- chain), because that's how coordinating a launch against a target date
+  -- actually works. See launchReadiness.js.
+  CREATE TABLE IF NOT EXISTS launch_items (
+    id TEXT PRIMARY KEY,
+    product_name TEXT NOT NULL,
+    description TEXT,
+    target_launch_date TEXT NOT NULL,
+    submitted_by TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'in_progress',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS launch_gates (
+    id TEXT PRIMARY KEY,
+    launch_item_id TEXT NOT NULL,
+    gate_name TEXT NOT NULL,
+    approver_role TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    actor TEXT,
+    comment TEXT,
+    decided_at TEXT,
+    FOREIGN KEY (launch_item_id) REFERENCES launch_items(id)
+  );
 `);

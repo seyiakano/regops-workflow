@@ -12,6 +12,7 @@ import { generateExecutiveBriefing } from "./executiveBriefing.js";
 import { queryAuditLog, getAuditSummary, buildAuditWorkbook } from "./auditReport.js";
 import { getDailyTrend } from "./statsTrend.js";
 import { getCycleTimeMetrics } from "./cycleTime.js";
+import { createLaunchItem, actionGate, serializeLaunchItem } from "./launchReadiness.js";
 import { createSession, destroySession, requireAuth, requireAdmin } from "./auth.js";
 import { seedTemplates } from "./seed.js";
 import { seedUsers } from "./seedUsers.js";
@@ -461,6 +462,63 @@ app.post("/api/instances/:id/ai-review", (req, res) => {
 app.post("/api/executive-briefing", (req, res) => {
   const { notes } = req.body ?? {};
   res.json(generateExecutiveBriefing(notes));
+});
+
+// ---- Product Governance / launch readiness ----
+// A distinct shape from workflow_templates/instances on purpose — readiness
+// gates are checked off in parallel by whichever role owns each one, not a
+// single sequential chain. See ./launchReadiness.js.
+
+app.get("/api/launch-items", (req, res) => {
+  const rows = db.prepare("SELECT * FROM launch_items ORDER BY target_launch_date ASC").all();
+  res.json(rows.map(serializeLaunchItem));
+});
+
+app.get("/api/launch-items/:id", (req, res) => {
+  const row = db.prepare("SELECT * FROM launch_items WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Launch item not found" });
+  res.json(serializeLaunchItem(row));
+});
+
+app.post("/api/launch-items", (req, res) => {
+  const { product_name, description, target_launch_date } = req.body;
+  if (!product_name || !target_launch_date) {
+    return res.status(400).json({ error: "product_name and target_launch_date are required" });
+  }
+  const id = createLaunchItem({
+    productName: product_name,
+    description,
+    targetLaunchDate: target_launch_date,
+    submittedBy: req.user.name,
+  });
+  res.status(201).json(serializeLaunchItem(db.prepare("SELECT * FROM launch_items WHERE id = ?").get(id)));
+});
+
+const VALID_GATE_ACTIONS = new Set(["approved", "blocked"]);
+
+app.post("/api/launch-items/:id/gates/:gateId/action", (req, res) => {
+  const { action, comment } = req.body;
+  if (!VALID_GATE_ACTIONS.has(action)) {
+    return res.status(400).json({ error: "action must be approved or blocked" });
+  }
+  const gate = db
+    .prepare("SELECT * FROM launch_gates WHERE id = ? AND launch_item_id = ?")
+    .get(req.params.gateId, req.params.id);
+  if (!gate) return res.status(404).json({ error: "Gate not found" });
+
+  // Same role-gate discipline as the main approval engine's /action route —
+  // enforced server-side against the verified session, not client-supplied.
+  if (req.user.approver_role !== gate.approver_role) {
+    return res.status(403).json({
+      error: `Only ${gate.approver_role} approvers can act on this gate. ${req.user.name} is ${
+        req.user.approver_role ? `a ${req.user.approver_role} approver` : "not an approver"
+      }.`,
+    });
+  }
+
+  actionGate({ launchItemId: req.params.id, gateId: req.params.gateId, action, actor: req.user.name, comment });
+  const item = db.prepare("SELECT * FROM launch_items WHERE id = ?").get(req.params.id);
+  res.json(serializeLaunchItem(item));
 });
 
 // ---- Production static serving ----
