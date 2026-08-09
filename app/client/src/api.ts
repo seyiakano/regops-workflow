@@ -13,6 +13,7 @@ import type {
   InstanceListResult,
   AuditResult,
   TrendResult,
+  CycleTimeMetrics,
 } from "./types";
 import { getToken, clearToken, broadcastUnauthorized } from "./tokenStore";
 
@@ -96,6 +97,7 @@ export const api = {
 
   getStats: (period: string) => request<CaseStats>(`/api/stats?period=${period}`),
   getTrend: (days = 30) => request<TrendResult>(`/api/stats/trend?days=${days}`),
+  getCycleTime: (slaHours = 48) => request<CycleTimeMetrics>(`/api/stats/cycle-time?slaHours=${slaHours}`),
   getNotificationCount: () => request<{ count: number }>("/api/notifications/count"),
 
   getAudit: (filters: { from?: string; to?: string; template_id?: string; action?: string; q?: string }) => {

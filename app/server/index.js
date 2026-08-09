@@ -11,6 +11,7 @@ import { runFinancialPromotionsReview, runAssetListingReview } from "./aiReview.
 import { generateExecutiveBriefing } from "./executiveBriefing.js";
 import { queryAuditLog, getAuditSummary, buildAuditWorkbook } from "./auditReport.js";
 import { getDailyTrend } from "./statsTrend.js";
+import { getCycleTimeMetrics } from "./cycleTime.js";
 import { createSession, destroySession, requireAuth, requireAdmin } from "./auth.js";
 import { seedTemplates } from "./seed.js";
 import { seedUsers } from "./seedUsers.js";
@@ -386,6 +387,11 @@ app.get("/api/stats", (req, res) => {
 app.get("/api/stats/trend", (req, res) => {
   const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 7), 180);
   res.json({ days, series: getDailyTrend(days) });
+});
+
+app.get("/api/stats/cycle-time", (req, res) => {
+  const slaHours = Math.min(Math.max(parseInt(req.query.slaHours, 10) || 48, 1), 720);
+  res.json(getCycleTimeMetrics(slaHours));
 });
 
 // ---- Audit trail BI ----

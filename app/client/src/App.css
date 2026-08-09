@@ -968,6 +968,30 @@ input:disabled {
   grid-column: 1 / -1;
 }
 
+.sla-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.sla-input input {
+  width: 60px;
+  padding: 4px 6px;
+}
+
+.sla-breach-block {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.sla-breach-block h4 {
+  font-size: 13.5px;
+  color: var(--text-h);
+  margin-bottom: 8px;
+}
+
 .drilldown-panel {
   border-top: 1px solid var(--border);
   padding-top: 16px;

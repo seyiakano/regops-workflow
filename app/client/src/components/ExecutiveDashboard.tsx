@@ -17,6 +17,7 @@ import {
 import { api } from "../api";
 import type { CaseStats, WorkflowInstance, WorkflowTemplate, TrendPoint } from "../types";
 import { StatusBadge } from "./StatusBadge";
+import { CycleTimePanel } from "./CycleTimePanel";
 
 // Fixed categorical order (never cycled/reassigned) — dataviz skill reference palette.
 const SERIES_COLORS = [
@@ -227,6 +228,8 @@ export function ExecutiveDashboard() {
             </LineChart>
           </ResponsiveContainer>
         </div>
+
+        <CycleTimePanel />
       </div>
 
       {drilldown && (

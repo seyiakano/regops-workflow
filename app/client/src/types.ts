@@ -162,6 +162,30 @@ export interface TrendResult {
   series: TrendPoint[];
 }
 
+export interface CycleTimeRoleStat {
+  role: string;
+  count: number;
+  avgHours: number;
+  medianHours: number;
+  maxHours: number;
+}
+
+export interface CycleTimeBreach {
+  case_number: string;
+  title: string;
+  stage_name: string;
+  approver_role: string;
+  hours_in_stage: number;
+  submitted_by: string;
+}
+
+export interface CycleTimeMetrics {
+  slaHours: number;
+  byRole: CycleTimeRoleStat[];
+  overall: { resolvedCount: number; avgResolutionHours: number; medianResolutionHours: number };
+  breaches: CycleTimeBreach[];
+}
+
 export interface ExecutiveBriefing {
   generatedAt: string;
   executiveSummary: string[];
