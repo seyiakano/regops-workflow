@@ -529,6 +529,20 @@ input:disabled {
   background: var(--warn-bg);
   color: var(--warn);
 }
+.badge-advisory {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.ai-oversight-note {
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--text);
+  opacity: 0.85;
+  border-left: 2px solid var(--accent);
+  padding-left: 8px;
+  margin: 0;
+}
 .badge-status-PASS {
   background: var(--success-bg);
   color: var(--success);

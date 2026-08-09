@@ -17,6 +17,13 @@ export const AI_REVIEW_TEMPLATES: Record<
   },
 };
 
+// Shared wording so the "AI assists, humans decide" principle reads
+// identically wherever it's surfaced (AI review cards, the action box, the
+// board pack) — this is a deliberate governance statement, not incidental
+// copy, and should stay in sync everywhere it appears.
+export const AI_OVERSIGHT_STATEMENT =
+  "AI output is advisory only. No AI review can approve, reject, or return a case — every decision requires sign-off from an authenticated human approver matching the stage's required role.";
+
 const DEFAULT_CONTENT_LABEL = "Justification";
 const DEFAULT_CONTENT_PLACEHOLDER = "Type your comment — describe the specific request. This is what the first approver will see.";
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import type { CaseStats, CycleTimeMetrics, ExecutiveBriefing, LaunchItem } from "../types";
+import type { AuditSummary, CaseStats, CycleTimeMetrics, ExecutiveBriefing, LaunchItem } from "../types";
 import { formatHours } from "./CycleTimePanel";
+import { AI_OVERSIGHT_STATEMENT } from "../constants";
 
 const LAUNCH_STATUS_LABEL: Record<string, string> = {
   in_progress: "In progress",
@@ -14,6 +15,7 @@ export function BoardPackPage({ onBack }: { onBack: () => void }) {
   const [stats, setStats] = useState<CaseStats | null>(null);
   const [cycleTime, setCycleTime] = useState<CycleTimeMetrics | null>(null);
   const [launchItems, setLaunchItems] = useState<LaunchItem[]>([]);
+  const [auditSummary, setAuditSummary] = useState<AuditSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,17 +24,19 @@ export function BoardPackPage({ onBack }: { onBack: () => void }) {
       api.getStats("all"),
       api.getCycleTime(48),
       api.listLaunchItems(),
+      api.getAudit({}),
     ])
-      .then(([b, s, c, l]) => {
+      .then(([b, s, c, l, a]) => {
         setBriefing(b);
         setStats(s);
         setCycleTime(c);
         setLaunchItems(l);
+        setAuditSummary(a.summary);
       })
       .catch((e) => setError((e as Error).message));
   }, []);
 
-  const loading = !briefing || !stats || !cycleTime;
+  const loading = !briefing || !stats || !cycleTime || !auditSummary;
 
   return (
     <div className="page">
@@ -215,6 +219,22 @@ export function BoardPackPage({ onBack }: { onBack: () => void }) {
             ) : (
               <p>No product launches currently registered.</p>
             )}
+          </section>
+
+          <section className="board-pack-section">
+            <h2>AI Usage &amp; Human Oversight</h2>
+            <p>{AI_OVERSIGHT_STATEMENT}</p>
+            <div className="board-pack-metrics">
+              <div className="board-pack-metric">
+                <span className="board-pack-metric-value">{auditSummary.ai_review}</span>
+                <span className="board-pack-metric-label">AI-assisted reviews run (advisory only)</span>
+              </div>
+              <div className="board-pack-metric">
+                {/* Structurally always 0 — no code path lets an AI review action approve/reject/return a case, see AI_OVERSIGHT_STATEMENT */}
+                <span className="board-pack-metric-value">0</span>
+                <span className="board-pack-metric-label">Cases auto-decided by AI</span>
+              </div>
+            </div>
           </section>
 
           <section className="board-pack-section">

@@ -53,6 +53,9 @@ export function AiReviewCard({ review }: { review: AiReview }) {
     <div className="ai-review-card">
       <div className="ai-review-card-header">
         {review.is_mock && <span className="badge badge-mock">MOCK — not a real AI call</span>}
+        <span className="badge badge-advisory" title="AI output never auto-decides — a human approver always makes the call">
+          Advisory only · human sign-off required
+        </span>
         <span className={`badge ${statusBadgeClass}`}>{statusText}</span>
         <span className="muted timestamp">{new Date(review.created_at).toLocaleString()}</span>
       </div>

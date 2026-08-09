@@ -3,7 +3,7 @@ import { api } from "../api";
 import type { WorkflowInstanceDetail } from "../types";
 import { StatusBadge } from "./StatusBadge";
 import { AiReviewCard } from "./AiReviewCard";
-import { AI_REVIEW_TEMPLATES, getContentLabel } from "../constants";
+import { AI_REVIEW_TEMPLATES, AI_OVERSIGHT_STATEMENT, getContentLabel } from "../constants";
 import { useAuth } from "../auth";
 
 export function InstanceDetail({ id, onBack }: { id: string; onBack: () => void }) {
@@ -168,6 +168,9 @@ export function InstanceDetail({ id, onBack }: { id: string; onBack: () => void 
           <div className="action-box form">
             <h3>Take Action — {instance.current_stage?.name}</h3>
             <p className="muted">Acting as {user?.name}</p>
+            {instance.ai_reviews.length > 0 && (
+              <p className="ai-oversight-note">{AI_OVERSIGHT_STATEMENT}</p>
+            )}
             <label>
               Comment
               <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} />
