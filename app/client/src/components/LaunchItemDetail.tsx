@@ -9,11 +9,24 @@ const STATUS_LABEL: Record<string, string> = {
   blocked: "Blocked",
 };
 
-function GateRow({ gate, onAct }: { gate: LaunchGate; onAct: (action: "approved" | "blocked", comment: string) => void }) {
+function GateRow({
+  gate,
+  submittedBy,
+  onAct,
+}: {
+  gate: LaunchGate;
+  submittedBy: string;
+  onAct: (action: "approved" | "blocked", comment: string) => void;
+}) {
   const { user } = useAuth();
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const canAct = !!user && user.approver_role === gate.approver_role;
+  const roleMatches = !!user && user.approver_role === gate.approver_role;
+  // Segregation of duties (maker-checker) — same guard as the case-approval
+  // flow: whoever registered this launch can't also sign off one of its
+  // readiness gates, even if their role matches that gate.
+  const isSelfSubmitted = !!user && user.name === submittedBy;
+  const canAct = roleMatches && !isSelfSubmitted;
 
   async function act(action: "approved" | "blocked") {
     setSubmitting(true);
@@ -57,6 +70,12 @@ function GateRow({ gate, onAct }: { gate: LaunchGate; onAct: (action: "approved"
             </button>
           </div>
         </div>
+      )}
+      {roleMatches && isSelfSubmitted && gate.status === "pending" && (
+        <p className="muted gate-decision-note">
+          You registered this launch yourself — a different {gate.approver_role} approver has to sign off this
+          gate (segregation of duties).
+        </p>
       )}
     </li>
   );
@@ -120,7 +139,12 @@ export function LaunchItemDetail({ id, onBack }: { id: string; onBack: () => voi
         <h3>Readiness Gates ({item.gates_approved}/{item.gates_total} clear)</h3>
         <ul className="gate-list">
           {item.gates.map((gate) => (
-            <GateRow key={gate.id} gate={gate} onAct={(action, comment) => handleGateAction(gate.id, action, comment)} />
+            <GateRow
+              key={gate.id}
+              gate={gate}
+              submittedBy={item.submitted_by}
+              onAct={(action, comment) => handleGateAction(gate.id, action, comment)}
+            />
           ))}
         </ul>
 

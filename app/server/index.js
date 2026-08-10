@@ -682,6 +682,7 @@ app.post("/api/launch-items/:id/gates/:gateId/action", (req, res) => {
     .prepare("SELECT * FROM launch_gates WHERE id = ? AND launch_item_id = ?")
     .get(req.params.gateId, req.params.id);
   if (!gate) return res.status(404).json({ error: "Gate not found" });
+  const launchItem = db.prepare("SELECT * FROM launch_items WHERE id = ?").get(req.params.id);
 
   // Same role-gate discipline as the main approval engine's /action route —
   // enforced server-side against the verified session, not client-supplied.
@@ -690,6 +691,15 @@ app.post("/api/launch-items/:id/gates/:gateId/action", (req, res) => {
       error: `Only ${gate.approver_role} approvers can act on this gate. ${req.user.name} is ${
         req.user.approver_role ? `a ${req.user.approver_role} approver` : "not an approver"
       }.`,
+    });
+  }
+
+  // Segregation of duties (maker-checker) — same guard as the case-approval
+  // /action route: whoever registered this launch can't also sign off one
+  // of its readiness gates, even if their role matches that gate.
+  if (req.user.name === launchItem?.submitted_by) {
+    return res.status(403).json({
+      error: "You registered this launch yourself — a different approver is required (segregation of duties).",
     });
   }
 
