@@ -64,7 +64,12 @@ export function InstanceDetail({ id, onBack }: { id: string; onBack: () => void 
     instance.current_stage_index === aiConfig.stageIndex &&
     instance.status === "in_progress" &&
     !!instance.content;
-  const canAct = !!user && user.approver_role === instance.current_stage?.approverRole;
+  const roleMatches = !!user && user.approver_role === instance.current_stage?.approverRole;
+  const isSelfSubmitted = !!user && user.name === instance.submitted_by;
+  // Segregation of duties (maker-checker): the submitter can never act on
+  // their own case, even if their role matches the current stage — see the
+  // matching guard on the server's /action route.
+  const canAct = roleMatches && !isSelfSubmitted;
 
   return (
     <div className="page">
@@ -190,12 +195,20 @@ export function InstanceDetail({ id, onBack }: { id: string; onBack: () => void 
         )}
         {instance.status === "in_progress" && !canAct && (
           <div className="action-box">
-            <p className="muted">
-              This case is awaiting <strong>{instance.current_stage?.approverRole}</strong> approval. You're
-              signed in as {user?.name}
-              {user?.approver_role ? ` (${user.approver_role})` : " (no approver role)"} — you can't act on
-              this stage.
-            </p>
+            {roleMatches && isSelfSubmitted ? (
+              <p className="muted">
+                This case is awaiting <strong>{instance.current_stage?.approverRole}</strong> approval. You
+                submitted it yourself — segregation of duties means a different {instance.current_stage?.approverRole}{" "}
+                approver has to act on it, even though your role matches this stage.
+              </p>
+            ) : (
+              <p className="muted">
+                This case is awaiting <strong>{instance.current_stage?.approverRole}</strong> approval. You're
+                signed in as {user?.name}
+                {user?.approver_role ? ` (${user.approver_role})` : " (no approver role)"} — you can't act on
+                this stage.
+              </p>
+            )}
           </div>
         )}
         {error && <p className="error">{error}</p>}

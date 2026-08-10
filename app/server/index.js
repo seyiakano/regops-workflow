@@ -348,6 +348,17 @@ app.post("/api/instances/:id/action", (req, res) => {
     });
   }
 
+  // Segregation of duties (maker-checker): the person who submitted a case
+  // can never be the one who approves, rejects, or returns it — even if
+  // their own role happens to match the current stage. Checked against
+  // submitted_by, not the audit trail, so it holds regardless of which
+  // stage the case is at.
+  if (req.user.name === instance.submitted_by) {
+    return res.status(403).json({
+      error: "You submitted this case yourself — a different approver is required (segregation of duties).",
+    });
+  }
+
   const actor = req.user.name;
   let nextIndex = instance.current_stage_index;
   let nextStatus = instance.status;
