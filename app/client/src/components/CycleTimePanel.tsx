@@ -119,32 +119,34 @@ export function CycleTimePanel() {
               <h4>
                 Cases past SLA ({metrics.slaHours}h) <span aria-hidden="true">⚠</span>
               </h4>
-              <table className="instance-table">
-                <thead>
-                  <tr>
-                    <th>Case #</th>
-                    <th>Subject</th>
-                    <th>Stage</th>
-                    <th>Waiting on</th>
-                    <th>Time in stage</th>
-                    <th>Submitted by</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {metrics.breaches.map((b) => (
-                    <tr key={b.case_number}>
-                      <td className="case-number-cell">{b.case_number}</td>
-                      <td>{b.title}</td>
-                      <td>{b.stage_name}</td>
-                      <td>
-                        <span className="chip">{b.approver_role}</span>
-                      </td>
-                      <td>{formatHours(b.hours_in_stage)}</td>
-                      <td>{b.submitted_by}</td>
+              <div className="table-scroll">
+                <table className="instance-table">
+                  <thead>
+                    <tr>
+                      <th>Case #</th>
+                      <th>Subject</th>
+                      <th>Stage</th>
+                      <th>Waiting on</th>
+                      <th>Time in stage</th>
+                      <th>Submitted by</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {metrics.breaches.map((b) => (
+                      <tr key={b.case_number}>
+                        <td className="case-number-cell">{b.case_number}</td>
+                        <td>{b.title}</td>
+                        <td>{b.stage_name}</td>
+                        <td>
+                          <span className="chip">{b.approver_role}</span>
+                        </td>
+                        <td>{formatHours(b.hours_in_stage)}</td>
+                        <td>{b.submitted_by}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>

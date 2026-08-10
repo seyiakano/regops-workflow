@@ -245,30 +245,32 @@ export function ExecutiveDashboard() {
           ) : drilldownRows.length === 0 ? (
             <p className="muted">No cases found.</p>
           ) : (
-            <table className="instance-table">
-              <thead>
-                <tr>
-                  <th>Case #</th>
-                  <th>Subject</th>
-                  <th>Process Type</th>
-                  <th>Status</th>
-                  <th>Submitted by</th>
-                </tr>
-              </thead>
-              <tbody>
-                {drilldownRows.map((inst) => (
-                  <tr key={inst.id}>
-                    <td className="case-number-cell">{inst.case_number}</td>
-                    <td>{inst.title}</td>
-                    <td>{inst.template_name}</td>
-                    <td>
-                      <StatusBadge status={inst.status} />
-                    </td>
-                    <td>{inst.submitted_by}</td>
+            <div className="table-scroll">
+              <table className="instance-table">
+                <thead>
+                  <tr>
+                    <th>Case #</th>
+                    <th>Subject</th>
+                    <th>Process Type</th>
+                    <th>Status</th>
+                    <th>Submitted by</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {drilldownRows.map((inst) => (
+                    <tr key={inst.id}>
+                      <td className="case-number-cell">{inst.case_number}</td>
+                      <td>{inst.title}</td>
+                      <td>{inst.template_name}</td>
+                      <td>
+                        <StatusBadge status={inst.status} />
+                      </td>
+                      <td>{inst.submitted_by}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}

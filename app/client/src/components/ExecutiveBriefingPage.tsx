@@ -108,24 +108,26 @@ export function ExecutiveBriefingPage({ onExportBoardPack }: { onExportBoardPack
 
           <h3>Asset Listings Update</h3>
           {briefing.assetListings.length > 0 ? (
-            <table className="instance-table">
-              <thead>
-                <tr>
-                  <th>Case #</th>
-                  <th>Title</th>
-                  <th>Current stage</th>
-                </tr>
-              </thead>
-              <tbody>
-                {briefing.assetListings.map((a) => (
-                  <tr key={a.caseNumber}>
-                    <td className="case-number-cell">{a.caseNumber}</td>
-                    <td>{a.title}</td>
-                    <td>{a.stage}</td>
+            <div className="table-scroll">
+              <table className="instance-table">
+                <thead>
+                  <tr>
+                    <th>Case #</th>
+                    <th>Title</th>
+                    <th>Current stage</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {briefing.assetListings.map((a) => (
+                    <tr key={a.caseNumber}>
+                      <td className="case-number-cell">{a.caseNumber}</td>
+                      <td>{a.title}</td>
+                      <td>{a.stage}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <p className="muted">No asset listings currently in governance review.</p>
           )}

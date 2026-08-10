@@ -346,26 +346,28 @@ export function IntegrationsPage() {
           operation as listing an asset or shipping a code change. Each process type maps to a distinct downstream
           system, and the trigger fires automatically the moment a case reaches final approval.
         </p>
-        <table className="instance-table">
-          <thead>
-            <tr>
-              <th>Process type</th>
-              <th>Target system</th>
-              <th>Simulated action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(deployTargets).map(([templateName, target]) => (
-              <tr key={templateName}>
-                <td>{templateName}</td>
-                <td>{target.system}</td>
-                <td>
-                  <code>{target.action}</code>
-                </td>
+        <div className="table-scroll">
+          <table className="instance-table">
+            <thead>
+              <tr>
+                <th>Process type</th>
+                <th>Target system</th>
+                <th>Simulated action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {Object.entries(deployTargets).map(([templateName, target]) => (
+                <tr key={templateName}>
+                  <td>{templateName}</td>
+                  <td>{target.system}</td>
+                  <td>
+                    <code>{target.action}</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="panel">

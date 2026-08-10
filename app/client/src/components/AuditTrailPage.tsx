@@ -152,36 +152,38 @@ export function AuditTrailPage() {
         ) : rows.length === 0 ? (
           <p className="muted">No audit events match this filter.</p>
         ) : (
-          <table className="instance-table">
-            <thead>
-              <tr>
-                <th>Timestamp</th>
-                <th>Case #</th>
-                <th>Case title</th>
-                <th>Process type</th>
-                <th>Actor</th>
-                <th>Action</th>
-                <th>Stage</th>
-                <th>Comment</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td className="timestamp">{new Date(r.created_at).toLocaleString()}</td>
-                  <td className="case-number-cell">{r.case_number}</td>
-                  <td>{r.case_title}</td>
-                  <td>{r.template_name}</td>
-                  <td>{r.actor}</td>
-                  <td>
-                    <span className={`badge badge-action-${r.action}`}>{r.action}</span>
-                  </td>
-                  <td>{r.stage_name ?? "—"}</td>
-                  <td>{r.comment || "—"}</td>
+          <div className="table-scroll">
+            <table className="instance-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Case #</th>
+                  <th>Case title</th>
+                  <th>Process type</th>
+                  <th>Actor</th>
+                  <th>Action</th>
+                  <th>Stage</th>
+                  <th>Comment</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id}>
+                    <td className="timestamp">{new Date(r.created_at).toLocaleString()}</td>
+                    <td className="case-number-cell">{r.case_number}</td>
+                    <td>{r.case_title}</td>
+                    <td>{r.template_name}</td>
+                    <td>{r.actor}</td>
+                    <td>
+                      <span className={`badge badge-action-${r.action}`}>{r.action}</span>
+                    </td>
+                    <td>{r.stage_name ?? "—"}</td>
+                    <td>{r.comment || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>

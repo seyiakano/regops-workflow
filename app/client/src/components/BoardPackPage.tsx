@@ -113,24 +113,26 @@ export function BoardPackPage({ onBack }: { onBack: () => void }) {
           <section className="board-pack-section">
             <h2>Asset Listings in Governance Review</h2>
             {briefing.assetListings.length > 0 ? (
-              <table className="board-pack-table">
-                <thead>
-                  <tr>
-                    <th>Case #</th>
-                    <th>Title</th>
-                    <th>Current stage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {briefing.assetListings.map((a) => (
-                    <tr key={a.caseNumber}>
-                      <td>{a.caseNumber}</td>
-                      <td>{a.title}</td>
-                      <td>{a.stage}</td>
+              <div className="table-scroll">
+                <table className="board-pack-table">
+                  <thead>
+                    <tr>
+                      <th>Case #</th>
+                      <th>Title</th>
+                      <th>Current stage</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {briefing.assetListings.map((a) => (
+                      <tr key={a.caseNumber}>
+                        <td>{a.caseNumber}</td>
+                        <td>{a.title}</td>
+                        <td>{a.stage}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <p>No asset listings currently in governance review.</p>
             )}
@@ -163,26 +165,28 @@ export function BoardPackPage({ onBack }: { onBack: () => void }) {
             {cycleTime.byRole.length > 0 && (
               <>
                 <h3>Average hand-off time by approver role</h3>
-                <table className="board-pack-table">
-                  <thead>
-                    <tr>
-                      <th>Role</th>
-                      <th>Completed hand-offs</th>
-                      <th>Avg time</th>
-                      <th>Median time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cycleTime.byRole.map((r) => (
-                      <tr key={r.role}>
-                        <td>{r.role}</td>
-                        <td>{r.count}</td>
-                        <td>{formatHours(r.avgHours)}</td>
-                        <td>{formatHours(r.medianHours)}</td>
+                <div className="table-scroll">
+                  <table className="board-pack-table">
+                    <thead>
+                      <tr>
+                        <th>Role</th>
+                        <th>Completed hand-offs</th>
+                        <th>Avg time</th>
+                        <th>Median time</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {cycleTime.byRole.map((r) => (
+                        <tr key={r.role}>
+                          <td>{r.role}</td>
+                          <td>{r.count}</td>
+                          <td>{formatHours(r.avgHours)}</td>
+                          <td>{formatHours(r.medianHours)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </>
             )}
           </section>
@@ -190,32 +194,34 @@ export function BoardPackPage({ onBack }: { onBack: () => void }) {
           <section className="board-pack-section">
             <h2>Product Governance — Launch Readiness</h2>
             {launchItems.length > 0 ? (
-              <table className="board-pack-table">
-                <thead>
-                  <tr>
-                    <th>Product / feature</th>
-                    <th>Target date</th>
-                    <th>Status</th>
-                    <th>Gates clear</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {launchItems.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.product_name}</td>
-                      <td>{new Date(item.target_launch_date).toLocaleDateString("en-GB")}</td>
-                      <td>
-                        <span className={`board-pack-badge board-pack-badge-${item.status}`}>
-                          {LAUNCH_STATUS_LABEL[item.status]}
-                        </span>
-                      </td>
-                      <td>
-                        {item.gates_approved}/{item.gates_total}
-                      </td>
+              <div className="table-scroll">
+                <table className="board-pack-table">
+                  <thead>
+                    <tr>
+                      <th>Product / feature</th>
+                      <th>Target date</th>
+                      <th>Status</th>
+                      <th>Gates clear</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {launchItems.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.product_name}</td>
+                        <td>{new Date(item.target_launch_date).toLocaleDateString("en-GB")}</td>
+                        <td>
+                          <span className={`board-pack-badge board-pack-badge-${item.status}`}>
+                            {LAUNCH_STATUS_LABEL[item.status]}
+                          </span>
+                        </td>
+                        <td>
+                          {item.gates_approved}/{item.gates_total}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <p>No product launches currently registered.</p>
             )}

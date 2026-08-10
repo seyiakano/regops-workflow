@@ -336,6 +336,8 @@ input:disabled {
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn-icon {
@@ -459,8 +461,13 @@ input:disabled {
   font-weight: 500;
 }
 
+.table-scroll {
+  overflow-x: auto;
+}
+
 .instance-table {
   width: 100%;
+  min-width: 560px;
   border-collapse: collapse;
   font-size: 13.5px;
 }
@@ -615,6 +622,7 @@ input:disabled {
 .ai-review-trigger {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   padding-top: 12px;
 }
@@ -1300,6 +1308,15 @@ input:disabled {
     border-radius: 0;
     padding: 0;
     max-width: 100%;
+  }
+  .table-scroll {
+    overflow-x: visible;
+  }
+}
+
+@media (max-width: 480px) {
+  .board-pack-doc {
+    padding: 20px 16px;
   }
 }
 

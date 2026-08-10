@@ -81,34 +81,36 @@ export function Dashboard({ onOpenInstance }: { onOpenInstance: (id: string) => 
           <p className="muted">No cases match this filter.</p>
         ) : (
           <>
-            <table className="instance-table">
-              <thead>
-                <tr>
-                  <th>Case #</th>
-                  <th>Subject</th>
-                  <th>Process Type</th>
-                  <th>Current stage</th>
-                  <th>Status</th>
-                  <th>Submitted by</th>
-                  <th>Updated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {instances.map((inst) => (
-                  <tr key={inst.id} className="clickable-row" onClick={() => onOpenInstance(inst.id)}>
-                    <td className="case-number-cell">{inst.case_number}</td>
-                    <td>{inst.title}</td>
-                    <td>{inst.template_name}</td>
-                    <td>{inst.current_stage?.name ?? "—"}</td>
-                    <td>
-                      <StatusBadge status={inst.status} />
-                    </td>
-                    <td>{inst.submitted_by}</td>
-                    <td>{new Date(inst.updated_at).toLocaleString()}</td>
+            <div className="table-scroll">
+              <table className="instance-table">
+                <thead>
+                  <tr>
+                    <th>Case #</th>
+                    <th>Subject</th>
+                    <th>Process Type</th>
+                    <th>Current stage</th>
+                    <th>Status</th>
+                    <th>Submitted by</th>
+                    <th>Updated</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {instances.map((inst) => (
+                    <tr key={inst.id} className="clickable-row" onClick={() => onOpenInstance(inst.id)}>
+                      <td className="case-number-cell">{inst.case_number}</td>
+                      <td>{inst.title}</td>
+                      <td>{inst.template_name}</td>
+                      <td>{inst.current_stage?.name ?? "—"}</td>
+                      <td>
+                        <StatusBadge status={inst.status} />
+                      </td>
+                      <td>{inst.submitted_by}</td>
+                      <td>{new Date(inst.updated_at).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <div className="pagination">
               <span className="muted">
                 {total} case{total === 1 ? "" : "s"} · page {page} of {pageCount}
