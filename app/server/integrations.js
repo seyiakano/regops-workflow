@@ -14,6 +14,7 @@ const now = () => new Date().toISOString();
 export const SLACK_CHANNEL = "#regops-review";
 export const SLACK_INTAKE_CHANNEL = "#regops-intake";
 export const VOICE_INTAKE_SOURCE = "Web Speech API (browser, on-device transcription)";
+export const ESCALATION_TARGET = "2LoD Leadership";
 
 // What a final approval on each workflow template actually rolls out to.
 // Deliberately different per template — "approved" means publish marketing
@@ -197,6 +198,30 @@ export function logVoiceIntakeEvent({ instanceId, templateName, title, submitted
     eventType: "voice_intake",
     target: VOICE_INTAKE_SOURCE,
     summary: `Voice-drafted case from ${submittedBy}: "${title}" (${templateName})`,
+    payload,
+  });
+}
+
+// Simulated SLA-breach escalation — same simulation contract as the Slack
+// functions above: no real paging/notification system is wired up, so this
+// logs the notice 2LoD Leadership would receive rather than sending one.
+export function simulateEscalationNotice({ instance, caseNumber, stageName, hoursInStage, triggeredBy }) {
+  const payload = {
+    to: ESCALATION_TARGET,
+    subject: `SLA breach: ${caseNumber} — ${instance.title}`,
+    body: `${caseNumber} has been sitting in "${stageName}" for ${
+      hoursInStage != null ? `${hoursInStage}h` : "longer than the configured SLA"
+    }, past the configured SLA threshold. Escalated by ${triggeredBy}.`,
+    case_number: caseNumber,
+    stage_name: stageName,
+    triggered_by: triggeredBy,
+  };
+  return logEvent({
+    instanceId: instance.id,
+    direction: "outbound",
+    eventType: "escalation_notice",
+    target: ESCALATION_TARGET,
+    summary: `Escalation notice sent to ${ESCALATION_TARGET} for ${caseNumber} (${stageName})`,
     payload,
   });
 }

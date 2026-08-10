@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { AuditRow, AuditSummary, WorkflowTemplate } from "../types";
+import { formatUkTimestamp } from "../formatters";
 
 const ACTION_OPTIONS = [
   { value: "", label: "All actions" },
@@ -11,12 +12,19 @@ const ACTION_OPTIONS = [
   { value: "ai_review", label: "AI review" },
 ];
 
+const LOD_OPTIONS = [
+  { value: "", label: "All Lines of Defence" },
+  { value: "1lod", label: "1LoD" },
+  { value: "2lod", label: "2LoD" },
+];
+
 export function AuditTrailPage() {
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [action, setAction] = useState("");
+  const [lod, setLod] = useState("");
   const [q, setQ] = useState("");
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [summary, setSummary] = useState<AuditSummary | null>(null);
@@ -24,7 +32,14 @@ export function AuditTrailPage() {
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const filters = { from: from || undefined, to: to || undefined, template_id: templateId || undefined, action: action || undefined, q: q || undefined };
+  const filters = {
+    from: from || undefined,
+    to: to || undefined,
+    template_id: templateId || undefined,
+    action: action || undefined,
+    lod: lod || undefined,
+    q: q || undefined,
+  };
 
   async function refresh() {
     setLoading(true);
@@ -48,7 +63,7 @@ export function AuditTrailPage() {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from, to, templateId, action, q]);
+  }, [from, to, templateId, action, lod, q]);
 
   async function handleExport() {
     setExporting(true);
@@ -100,6 +115,16 @@ export function AuditTrailPage() {
             Action
             <select value={action} onChange={(e) => setAction(e.target.value)}>
               {ACTION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Line of Defence
+            <select value={lod} onChange={(e) => setLod(e.target.value)}>
+              {LOD_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
@@ -169,7 +194,7 @@ export function AuditTrailPage() {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
-                    <td className="timestamp">{new Date(r.created_at).toLocaleString()}</td>
+                    <td className="timestamp">{formatUkTimestamp(r.created_at)}</td>
                     <td className="case-number-cell">{r.case_number}</td>
                     <td>{r.case_title}</td>
                     <td>{r.template_name}</td>

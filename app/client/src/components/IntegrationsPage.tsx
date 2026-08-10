@@ -9,6 +9,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   slack_inbound: "Slack inbound",
   deploy_trigger: "Deploy trigger",
   voice_intake: "Voice intake",
+  escalation_notice: "Escalation notice",
 };
 
 export function IntegrationsPage() {

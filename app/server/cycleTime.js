@@ -35,6 +35,13 @@ export function getCycleTimeMetrics(slaHours = 48) {
   const templates = db.prepare("SELECT id, stages FROM workflow_templates").all();
   const stagesById = Object.fromEntries(templates.map((t) => [t.id, JSON.parse(t.stages)]));
 
+  // A case's actual stage chain may have been dynamically extended at
+  // creation (see dynamicRouting.js) and stored per-instance — fall back to
+  // the template default otherwise.
+  function stagesForInstance(inst) {
+    return inst.stages_json ? JSON.parse(inst.stages_json) : (stagesById[inst.template_id] ?? []);
+  }
+
   const auditRows = db
     .prepare(
       `SELECT instance_id, stage_name, action, created_at FROM audit_log
@@ -50,13 +57,17 @@ export function getCycleTimeMetrics(slaHours = 48) {
 
   // Stage name -> approverRole. Stage names are a shared vocabulary across
   // templates (see seed.js/seedUsers.js sync comments), so search every
-  // template's stage list rather than assuming a single owning template.
+  // template's stage list — plus every instance's own dynamically-inserted
+  // stages (e.g. "2LoD Legal & Sanctions Review" isn't in any template's
+  // default list, only in the instances that triggered it) — rather than
+  // assuming a single owning template.
+  const allKnownStages = Object.values(stagesById).flat();
+  for (const inst of instances) {
+    if (inst.stages_json) allKnownStages.push(...JSON.parse(inst.stages_json));
+  }
   function roleForStageName(stageName) {
-    for (const stages of Object.values(stagesById)) {
-      const match = stages.find((s) => s.name === stageName);
-      if (match) return match.approverRole;
-    }
-    return null;
+    const match = allKnownStages.find((s) => s.name === stageName);
+    return match ? match.approverRole : null;
   }
 
   const dwellByRole = {};
@@ -88,7 +99,7 @@ export function getCycleTimeMetrics(slaHours = 48) {
   const breaches = [];
   for (const inst of instances) {
     if (inst.status !== "in_progress") continue;
-    const stages = stagesById[inst.template_id] ?? [];
+    const stages = stagesForInstance(inst);
     const stage = stages[inst.current_stage_index];
     if (!stage) continue;
     const rows = rowsByInstance.get(inst.id) ?? [];
@@ -96,6 +107,7 @@ export function getCycleTimeMetrics(slaHours = 48) {
     const hrs = hoursBetween(enteredAt, nowIso);
     if (hrs >= slaHours) {
       breaches.push({
+        id: inst.id,
         case_number: `CASE-${String(inst.rowid).padStart(6, "0")}`,
         title: inst.title,
         stage_name: stage.name,

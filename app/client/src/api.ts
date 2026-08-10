@@ -89,6 +89,11 @@ export const api = {
   actionInstance: (id: string, data: { action: string; comment?: string }) =>
     request<WorkflowInstance>(`/api/instances/${id}/action`, { method: "POST", body: JSON.stringify(data) }),
   runAiReview: (id: string) => request<AiReview>(`/api/instances/${id}/ai-review`, { method: "POST" }),
+  escalateInstance: (id: string, hoursInStage?: number) =>
+    request<{ id: string }>(`/api/instances/${id}/escalate`, {
+      method: "POST",
+      body: JSON.stringify({ hours_in_stage: hoursInStage }),
+    }),
   uploadAttachments: (id: string, files: File[]) => {
     const formData = new FormData();
     for (const f of files) formData.append("files", f);
@@ -131,7 +136,7 @@ export const api = {
     auto_detected?: { templateId: string | null; title: string; severity: Severity | null };
   }) => request<WorkflowInstance>("/api/integrations/voice/new-case", { method: "POST", body: JSON.stringify(data) }),
 
-  getAudit: (filters: { from?: string; to?: string; template_id?: string; action?: string; q?: string }) => {
+  getAudit: (filters: { from?: string; to?: string; template_id?: string; action?: string; q?: string; lod?: string }) => {
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(filters)) if (v) params.set(k, v);
     return request<AuditResult>(`/api/audit?${params.toString()}`);
@@ -146,6 +151,7 @@ export const api = {
     template_id?: string;
     action?: string;
     q?: string;
+    lod?: string;
   }) => {
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(filters)) if (v) params.set(k, v);

@@ -134,3 +134,16 @@ db.exec(`
     FOREIGN KEY (instance_id) REFERENCES instances(id)
   );
 `);
+
+// stages_json: a per-instance SNAPSHOT of the stage chain, computed once at
+// creation time by dynamicRouting.js (e.g. a high-severity or complex-asset
+// case gets an extra Legal stage spliced in). Nullable — null means "use the
+// template's default stages", which keeps every row created before this
+// column existed working unchanged. Added via ALTER rather than the CREATE
+// TABLE above so it applies to already-provisioned databases too.
+const hasStagesJson = db
+  .prepare("SELECT 1 FROM pragma_table_info('instances') WHERE name = 'stages_json'")
+  .get();
+if (!hasStagesJson) {
+  db.exec("ALTER TABLE instances ADD COLUMN stages_json TEXT");
+}

@@ -3,6 +3,8 @@ import { api } from "../api";
 import type { Severity, WorkflowInstance, WorkflowTemplate } from "../types";
 import { getContentLabel, getContentPlaceholder, SEVERITY_OPTIONS } from "../constants";
 import { useAuth } from "../auth";
+import { computePreviewStages } from "../dynamicRouting";
+import { runFcaPrecheck, type FcaPrecheckResult } from "../fcaPrecheck";
 
 export function StartProcessForm({
   templates,
@@ -22,8 +24,11 @@ export function StartProcessForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastCreated, setLastCreated] = useState<WorkflowInstance | null>(null);
+  const [precheck, setPrecheck] = useState<FcaPrecheckResult | null>(null);
 
   const selectedTemplate = templates.find((t) => t.id === templateId);
+  const isFinancialPromotion = selectedTemplate?.name === "Financial Promotion Review";
+  const routingStages = selectedTemplate ? computePreviewStages(selectedTemplate, { severity, content }) : [];
 
   function addFiles(fileList: FileList | null) {
     if (!fileList) return;
@@ -58,6 +63,7 @@ export function StartProcessForm({
       setFigmaLink("");
       setSeverity("");
       setFiles([]);
+      setPrecheck(null);
       onCreated();
     } catch (e) {
       setError((e as Error).message);
@@ -102,7 +108,10 @@ export function StartProcessForm({
                 type="button"
                 key={t.id}
                 className={`process-type-card ${templateId === t.id ? "selected" : ""}`}
-                onClick={() => setTemplateId(t.id)}
+                onClick={() => {
+                  setTemplateId(t.id);
+                  setPrecheck(null);
+                }}
               >
                 <div className="process-type-name">{t.name}</div>
                 {t.description && <div className="muted">{t.description}</div>}
@@ -116,12 +125,21 @@ export function StartProcessForm({
             <div className="routing-preview">
               <span className="step-label">This process will route to:</span>
               <ol className="routing-chain">
-                {selectedTemplate.stages.map((s, i) => (
-                  <li key={i}>
+                {routingStages.map((s, i) => (
+                  <li key={i} className={s.approverRole === "Legal" ? "routing-stage-dynamic" : ""}>
                     {s.name} <span className="muted">({s.approverRole})</span>
+                    {s.approverRole === "Legal" && !selectedTemplate.stages.some((base) => base.approverRole === "Legal") && (
+                      <span className="chip chip-risk">risk-based</span>
+                    )}
                   </li>
                 ))}
               </ol>
+              {routingStages.length > selectedTemplate.stages.length && (
+                <p className="muted routing-dynamic-note">
+                  A 2LoD Legal &amp; Sanctions Review has been added automatically because this case is high/severe
+                  urgency{selectedTemplate.name === "Asset Listing Governance Review" ? " or involves a complex product (staking/yield)" : ""}.
+                </p>
+              )}
             </div>
 
             <span className="step-label">2. Case details</span>
@@ -133,12 +151,56 @@ export function StartProcessForm({
               {getContentLabel(selectedTemplate.name)}
               <textarea
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={(e) => {
+                  setContent(e.target.value);
+                  setPrecheck(null);
+                }}
                 rows={4}
                 placeholder={getContentPlaceholder(selectedTemplate.name)}
                 required
               />
             </label>
+
+            {isFinancialPromotion && (
+              <div className="fca-precheck">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setPrecheck(runFcaPrecheck(content))}
+                  disabled={!content.trim()}
+                >
+                  Run Compliance First-Pass Check
+                </button>
+                {precheck && (
+                  <div className={`fca-precheck-card ${precheck.pass ? "fca-precheck-pass" : "fca-precheck-fail"}`}>
+                    <div className="fca-precheck-header">
+                      <strong>FCA Compliance Pre-Check</strong>
+                      <span className={`badge ${precheck.pass ? "badge-consumer-duty-pass" : "badge-consumer-duty-fail"}`}>
+                        {precheck.pass ? "Pass" : "Needs revision"}
+                      </span>
+                    </div>
+                    <ul className="fca-precheck-list">
+                      <li className={precheck.hasRiskWarning ? "fca-check-pass" : "fca-check-fail"}>
+                        {precheck.hasRiskWarning ? "✓" : "✗"} Mandatory risk warning{" "}
+                        {precheck.hasRiskWarning
+                          ? "present."
+                          : "missing — must include: “Don't invest unless you're prepared to lose all the money you invest. This is a high-risk investment and you are unlikely to be protected if something goes wrong.”"}
+                      </li>
+                      <li className={precheck.matchedIncentives.length === 0 ? "fca-check-pass" : "fca-check-fail"}>
+                        {precheck.matchedIncentives.length === 0 ? "✓" : "✗"} Prohibited marketing incentives{" "}
+                        {precheck.matchedIncentives.length === 0
+                          ? "none detected."
+                          : `detected: ${precheck.matchedIncentives.join(", ")}.`}
+                      </li>
+                    </ul>
+                    <p className="muted fca-precheck-note">
+                      Rule-based first-pass check against PS23/6 — not a substitute for full 2LoD review.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <label>
               Figma link (where necessary)
               <input

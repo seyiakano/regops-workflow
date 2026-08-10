@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { db } from "./db.js";
+import { formatUkTimestamp } from "./formatters.js";
 
 function caseNumber(rowid) {
   return `CASE-${String(rowid).padStart(6, "0")}`;
@@ -7,7 +8,7 @@ function caseNumber(rowid) {
 
 // Shared filter-to-SQL builder for both the on-screen audit table and the
 // Excel export, so the two can never silently drift apart.
-function buildAuditQuery({ from, to, template_id, action, q }) {
+function buildAuditQuery({ from, to, template_id, action, q, lod }) {
   const clauses = [];
   const params = [];
 
@@ -31,6 +32,16 @@ function buildAuditQuery({ from, to, template_id, action, q }) {
     clauses.push("(instances.title LIKE ? OR audit_log.actor LIKE ? OR audit_log.comment LIKE ?)");
     const like = `%${q}%`;
     params.push(like, like, like);
+  }
+  // Line of Defence is read off the stage name's own "1LoD"/"2LoD" prefix
+  // (the shared stage-name vocabulary already carries it — see
+  // seed.js/dynamicRouting.js) rather than a separate stored column, since
+  // not every template's stages use the prefix (e.g. Existing Process
+  // Change's "Senior Manager Sign-off" has no LoD of its own).
+  if (lod === "1lod") {
+    clauses.push("audit_log.stage_name LIKE '1LoD%'");
+  } else if (lod === "2lod") {
+    clauses.push("audit_log.stage_name LIKE '2LoD%'");
   }
 
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
@@ -87,7 +98,7 @@ function getCasesForExport({ from, to, template_id }) {
   const rows = db
     .prepare(
       `SELECT instances.rowid, instances.title, instances.submitted_by, instances.status, instances.severity,
-              instances.current_stage_index, instances.created_at, instances.updated_at,
+              instances.current_stage_index, instances.created_at, instances.updated_at, instances.stages_json,
               workflow_templates.name as template_name, workflow_templates.stages
        FROM instances
        JOIN workflow_templates ON workflow_templates.id = instances.template_id
@@ -97,7 +108,7 @@ function getCasesForExport({ from, to, template_id }) {
     .all(...params);
 
   return rows.map((r) => {
-    const stages = JSON.parse(r.stages);
+    const stages = r.stages_json ? JSON.parse(r.stages_json) : JSON.parse(r.stages);
     return {
       case_number: caseNumber(r.rowid),
       title: r.title,
@@ -133,13 +144,18 @@ export async function buildAuditWorkbook(filters) {
     { header: "Current Stage", key: "current_stage", width: 24 },
     { header: "Submitted By", key: "submitted_by", width: 20 },
     { header: "Severity", key: "severity", width: 10 },
-    { header: "Created", key: "created_at", width: 20 },
-    { header: "Updated", key: "updated_at", width: 20 },
+    { header: "Created", key: "created_at", width: 22 },
+    { header: "Updated", key: "updated_at", width: 22 },
   ];
   casesSheet.getRow(1).font = { bold: true };
   casesSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE1E0D9" } };
   for (const c of getCasesForExport(filters)) {
-    casesSheet.addRow({ ...c, status: STATUS_LABEL[c.status] ?? c.status });
+    casesSheet.addRow({
+      ...c,
+      status: STATUS_LABEL[c.status] ?? c.status,
+      created_at: formatUkTimestamp(c.created_at),
+      updated_at: formatUkTimestamp(c.updated_at),
+    });
   }
 
   const auditSheet = workbook.addWorksheet("Audit Trail");
@@ -147,7 +163,7 @@ export async function buildAuditWorkbook(filters) {
     { header: "Case #", key: "case_number", width: 14 },
     { header: "Case Subject", key: "case_title", width: 32 },
     { header: "Process Type", key: "template_name", width: 28 },
-    { header: "Timestamp", key: "created_at", width: 20 },
+    { header: "Timestamp", key: "created_at", width: 22 },
     { header: "Actor", key: "actor", width: 20 },
     { header: "Action", key: "action", width: 14 },
     { header: "Stage", key: "stage_name", width: 24 },
@@ -156,7 +172,7 @@ export async function buildAuditWorkbook(filters) {
   auditSheet.getRow(1).font = { bold: true };
   auditSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE1E0D9" } };
   for (const r of queryAuditLog(filters)) {
-    auditSheet.addRow(r);
+    auditSheet.addRow({ ...r, created_at: formatUkTimestamp(r.created_at) });
   }
 
   return workbook;

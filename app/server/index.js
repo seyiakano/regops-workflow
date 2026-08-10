@@ -13,12 +13,14 @@ import { queryAuditLog, getAuditSummary, buildAuditWorkbook } from "./auditRepor
 import { getDailyTrend } from "./statsTrend.js";
 import { getCycleTimeMetrics } from "./cycleTime.js";
 import { createLaunchItem, actionGate, serializeLaunchItem } from "./launchReadiness.js";
+import { computeInstanceStages } from "./dynamicRouting.js";
 import {
   simulateSlackSubmitNotification,
   simulateSlackDecisionNotification,
   simulateDeployTrigger,
   simulateSlackInboundCase,
   logVoiceIntakeEvent,
+  simulateEscalationNotice,
   listIntegrationEvents,
   DEPLOY_TARGETS,
 } from "./integrations.js";
@@ -167,12 +169,16 @@ function caseNumber(rowid) {
 
 function serializeInstance(row) {
   const template = serializeTemplate(db.prepare("SELECT * FROM workflow_templates WHERE id = ?").get(row.template_id));
-  const stage = template.stages[row.current_stage_index] ?? null;
+  // A case's actual stage chain is whatever was snapshotted for it at
+  // creation (see dynamicRouting.js) — falls back to the template's default
+  // for rows created before stages_json existed.
+  const stages = row.stages_json ? JSON.parse(row.stages_json) : template.stages;
+  const stage = stages[row.current_stage_index] ?? null;
   return {
     ...row,
     case_number: caseNumber(row.rowid),
     template_name: template.name,
-    stages: template.stages,
+    stages,
     current_stage: stage,
   };
 }
@@ -261,14 +267,30 @@ function createCase({ templateId, title, content, figmaLink, severity, submitted
   const template = db.prepare("SELECT * FROM workflow_templates WHERE id = ?").get(templateId);
   if (!template) throw Object.assign(new Error("Template not found"), { status: 404 });
 
+  // Risk-based dynamic routing — a high-severity case, or a complex-product
+  // Asset Listing, gets an extra Legal stage. Snapshotted once here rather
+  // than recomputed on every read (see dynamicRouting.js).
+  const stages = computeInstanceStages(template, { severity, content });
+  const stagesChanged = stages.length !== JSON.parse(template.stages).length;
+
   const id = nanoid();
   const ts = now();
   db.prepare(
-    `INSERT INTO instances (id, template_id, title, submitted_by, content, figma_link, severity, current_stage_index, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'in_progress', ?, ?)`
-  ).run(id, templateId, title, submittedBy, content ?? null, figmaLink ?? null, severity ?? null, ts, ts);
+    `INSERT INTO instances (id, template_id, title, submitted_by, content, figma_link, severity, current_stage_index, status, stages_json, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'in_progress', ?, ?, ?)`
+  ).run(
+    id,
+    templateId,
+    title,
+    submittedBy,
+    content ?? null,
+    figmaLink ?? null,
+    severity ?? null,
+    stagesChanged ? JSON.stringify(stages) : null,
+    ts,
+    ts
+  );
 
-  const stages = JSON.parse(template.stages);
   db.prepare(
     `INSERT INTO audit_log (id, instance_id, stage_name, actor, action, comment, created_at)
      VALUES (?, ?, ?, ?, 'submit', ?, ?)`
@@ -312,7 +334,7 @@ app.post("/api/instances/:id/action", (req, res) => {
   }
 
   const template = db.prepare("SELECT * FROM workflow_templates WHERE id = ?").get(instance.template_id);
-  const stages = JSON.parse(template.stages);
+  const stages = instance.stages_json ? JSON.parse(instance.stages_json) : JSON.parse(template.stages);
   const currentStage = stages[instance.current_stage_index];
 
   // Role gate: only a user whose approver_role matches the current stage's
@@ -377,6 +399,26 @@ app.post("/api/instances/:id/action", (req, res) => {
   }
 
   res.json(serialized);
+});
+
+// Simulated SLA-breach escalation — no real paging/notification system is
+// wired up (see ./integrations.js's simulation contract), so this logs what
+// the notice to 2LoD Leadership would contain rather than sending one.
+app.post("/api/instances/:id/escalate", (req, res) => {
+  const row = db.prepare("SELECT rowid, * FROM instances WHERE id = ?").get(req.params.id);
+  if (!row) return res.status(404).json({ error: "Instance not found" });
+  if (row.status !== "in_progress") {
+    return res.status(409).json({ error: "Only an in-progress case can be escalated" });
+  }
+  const instance = serializeInstance(row);
+  const eventId = simulateEscalationNotice({
+    instance: row,
+    caseNumber: instance.case_number,
+    stageName: instance.current_stage?.name ?? "Unknown stage",
+    hoursInStage: req.body?.hours_in_stage ?? null,
+    triggeredBy: req.user.name,
+  });
+  res.status(201).json({ id: eventId });
 });
 
 // ---- Notifications ----
@@ -522,14 +564,14 @@ app.get("/api/stats/cycle-time", (req, res) => {
 // ---- Audit trail BI ----
 
 app.get("/api/audit", (req, res) => {
-  const { from, to, template_id, action, q } = req.query;
-  const rows = queryAuditLog({ from, to, template_id, action, q });
+  const { from, to, template_id, action, q, lod } = req.query;
+  const rows = queryAuditLog({ from, to, template_id, action, q, lod });
   res.json({ rows, summary: getAuditSummary(rows) });
 });
 
 app.get("/api/audit/export", async (req, res) => {
-  const { from, to, template_id, action, q } = req.query;
-  const workbook = await buildAuditWorkbook({ from, to, template_id, action, q });
+  const { from, to, template_id, action, q, lod } = req.query;
+  const workbook = await buildAuditWorkbook({ from, to, template_id, action, q, lod });
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   res.setHeader("Content-Disposition", `attachment; filename="regops-audit-export-${now().slice(0, 10)}.xlsx"`);
   await workbook.xlsx.write(res);

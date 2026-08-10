@@ -13,6 +13,8 @@ export function CycleTimePanel() {
   const [slaHours, setSlaHours] = useState(48);
   const [metrics, setMetrics] = useState<CycleTimeMetrics | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [escalating, setEscalating] = useState<string | null>(null);
+  const [escalated, setEscalated] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     api
@@ -20,6 +22,18 @@ export function CycleTimePanel() {
       .then(setMetrics)
       .catch((e) => setError((e as Error).message));
   }, [slaHours]);
+
+  async function handleEscalate(id: string, hoursInStage: number) {
+    setEscalating(id);
+    try {
+      await api.escalateInstance(id, hoursInStage);
+      setEscalated((prev) => new Set(prev).add(id));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setEscalating(null);
+    }
+  }
 
   return (
     <div className="chart-card chart-card-wide">
@@ -48,6 +62,13 @@ export function CycleTimePanel() {
         <p>Loading…</p>
       ) : (
         <>
+          {metrics.breaches.length > 0 && (
+            <div className="sla-alert-banner" role="alert">
+              <span aria-hidden="true">⚠</span> SLA Breach Alert — {metrics.breaches.length} case
+              {metrics.breaches.length === 1 ? "" : "s"} currently past the {metrics.slaHours}h SLA threshold.
+            </div>
+          )}
+
           <div className="briefing-metrics">
             <div>
               <span className="briefing-metric-value">
@@ -129,11 +150,12 @@ export function CycleTimePanel() {
                       <th>Waiting on</th>
                       <th>Time in stage</th>
                       <th>Submitted by</th>
+                      <th>Escalation</th>
                     </tr>
                   </thead>
                   <tbody>
                     {metrics.breaches.map((b) => (
-                      <tr key={b.case_number}>
+                      <tr key={b.case_number} className="sla-breach-row">
                         <td className="case-number-cell">{b.case_number}</td>
                         <td>{b.title}</td>
                         <td>{b.stage_name}</td>
@@ -142,6 +164,20 @@ export function CycleTimePanel() {
                         </td>
                         <td>{formatHours(b.hours_in_stage)}</td>
                         <td>{b.submitted_by}</td>
+                        <td>
+                          {escalated.has(b.id) ? (
+                            <span className="muted">Escalation sent ✓</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn-danger"
+                              disabled={escalating === b.id}
+                              onClick={() => handleEscalate(b.id, b.hours_in_stage)}
+                            >
+                              {escalating === b.id ? "Sending…" : "Trigger Escalation Notice"}
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

@@ -187,6 +187,7 @@ export interface CycleTimeRoleStat {
 }
 
 export interface CycleTimeBreach {
+  id: string;
   case_number: string;
   title: string;
   stage_name: string;
@@ -232,7 +233,12 @@ export interface LaunchItem {
 }
 
 export type IntegrationDirection = "inbound" | "outbound";
-export type IntegrationEventType = "slack_notification" | "slack_inbound" | "deploy_trigger" | "voice_intake";
+export type IntegrationEventType =
+  | "slack_notification"
+  | "slack_inbound"
+  | "deploy_trigger"
+  | "voice_intake"
+  | "escalation_notice";
 
 export interface IntegrationEvent {
   id: string;
