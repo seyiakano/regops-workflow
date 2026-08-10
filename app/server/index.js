@@ -18,6 +18,7 @@ import {
   simulateSlackDecisionNotification,
   simulateDeployTrigger,
   simulateSlackInboundCase,
+  logVoiceIntakeEvent,
   listIntegrationEvents,
   DEPLOY_TARGETS,
 } from "./integrations.js";
@@ -250,7 +251,7 @@ const VALID_SEVERITIES = new Set(["severe", "high", "low"]);
 // both create a case the same way and both get the same outbound Slack
 // "new case submitted" notification, since a real Slack integration
 // wouldn't behave differently depending on where the case came from.
-function createCase({ templateId, title, content, figmaLink, severity, submittedBy, viaSlack = false }) {
+function createCase({ templateId, title, content, figmaLink, severity, submittedBy, sourceLabel }) {
   if (!templateId || !title) {
     throw Object.assign(new Error("template_id and title are required"), { status: 400 });
   }
@@ -275,7 +276,7 @@ function createCase({ templateId, title, content, figmaLink, severity, submitted
 
   const row = db.prepare("SELECT rowid, * FROM instances WHERE id = ?").get(id);
   const instance = serializeInstance(row);
-  simulateSlackSubmitNotification({ instance: row, templateName: template.name, caseNumber: instance.case_number, viaSlack });
+  simulateSlackSubmitNotification({ instance: row, templateName: template.name, caseNumber: instance.case_number, sourceLabel });
   return instance;
 }
 
@@ -421,13 +422,46 @@ app.post("/api/integrations/slack/new-case", (req, res) => {
       figmaLink: figma_link,
       severity,
       submittedBy: req.user.name,
-      viaSlack: true,
+      sourceLabel: "Slack",
     });
     simulateSlackInboundCase({
       instanceId: instance.id,
       templateName: template?.name ?? "Unknown",
       title,
       slackUser: req.user.name,
+    });
+    res.status(201).json(instance);
+  } catch (e) {
+    res.status(e.status ?? 500).json({ error: e.message });
+  }
+});
+
+// Voice-note intake — NOT simulated. The transcript was really produced by
+// the submitter's own browser (Web Speech API, client-side, no external
+// STT/LLM service or API key), parsed into fields with the same rule-based
+// heuristics used elsewhere in this app, then reviewed/edited by the
+// submitter before hitting submit — same case-creation path as every other
+// intake route. See ./integrations.js.
+app.post("/api/integrations/voice/new-case", (req, res) => {
+  const { template_id, title, content, figma_link, severity, transcript, auto_detected } = req.body;
+  try {
+    const template = db.prepare("SELECT name FROM workflow_templates WHERE id = ?").get(template_id);
+    const instance = createCase({
+      templateId: template_id,
+      title,
+      content,
+      figmaLink: figma_link,
+      severity,
+      submittedBy: req.user.name,
+      sourceLabel: "voice note",
+    });
+    logVoiceIntakeEvent({
+      instanceId: instance.id,
+      templateName: template?.name ?? "Unknown",
+      title,
+      submittedBy: req.user.name,
+      transcript: transcript ?? null,
+      autoDetected: auto_detected ?? null,
     });
     res.status(201).json(instance);
   } catch (e) {

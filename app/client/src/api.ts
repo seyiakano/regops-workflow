@@ -122,6 +122,14 @@ export const api = {
     figma_link?: string;
     severity?: Severity;
   }) => request<WorkflowInstance>("/api/integrations/slack/new-case", { method: "POST", body: JSON.stringify(data) }),
+  voiceNewCase: (data: {
+    template_id: string;
+    title: string;
+    content?: string;
+    severity?: Severity;
+    transcript?: string;
+    auto_detected?: { templateId: string | null; title: string; severity: Severity | null };
+  }) => request<WorkflowInstance>("/api/integrations/voice/new-case", { method: "POST", body: JSON.stringify(data) }),
 
   getAudit: (filters: { from?: string; to?: string; template_id?: string; action?: string; q?: string }) => {
     const params = new URLSearchParams();

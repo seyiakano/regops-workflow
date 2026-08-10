@@ -232,7 +232,7 @@ export interface LaunchItem {
 }
 
 export type IntegrationDirection = "inbound" | "outbound";
-export type IntegrationEventType = "slack_notification" | "slack_inbound" | "deploy_trigger";
+export type IntegrationEventType = "slack_notification" | "slack_inbound" | "deploy_trigger" | "voice_intake";
 
 export interface IntegrationEvent {
   id: string;

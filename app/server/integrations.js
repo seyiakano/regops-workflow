@@ -13,6 +13,7 @@ const now = () => new Date().toISOString();
 
 export const SLACK_CHANNEL = "#regops-review";
 export const SLACK_INTAKE_CHANNEL = "#regops-intake";
+export const VOICE_INTAKE_SOURCE = "Web Speech API (browser, on-device transcription)";
 
 // What a final approval on each workflow template actually rolls out to.
 // Deliberately different per template — "approved" means publish marketing
@@ -57,7 +58,7 @@ function logEvent({ instanceId = null, direction, eventType, target, summary, pa
   return id;
 }
 
-export function simulateSlackSubmitNotification({ instance, templateName, caseNumber, viaSlack = false }) {
+export function simulateSlackSubmitNotification({ instance, templateName, caseNumber, sourceLabel }) {
   const payload = {
     channel: SLACK_CHANNEL,
     text: `New case submitted: ${caseNumber} — ${instance.title}`,
@@ -71,7 +72,7 @@ export function simulateSlackSubmitNotification({ instance, templateName, caseNu
         elements: [
           {
             type: "mrkdwn",
-            text: `${templateName} · Submitted by ${instance.submitted_by}${viaSlack ? " (via Slack)" : ""} · Severity: ${
+            text: `${templateName} · Submitted by ${instance.submitted_by}${sourceLabel ? ` (via ${sourceLabel})` : ""} · Severity: ${
               instance.severity ?? "n/a"
             }`,
           },
@@ -173,6 +174,29 @@ export function simulateSlackInboundCase({ instanceId, templateName, title, slac
     eventType: "slack_inbound",
     target: SLACK_INTAKE_CHANNEL,
     summary: `Received /regops new-case from @${slackUser}: "${title}"`,
+    payload,
+  });
+}
+
+// Unlike the Slack functions above, this one is NOT simulated — the
+// transcript was really produced by the browser's Web Speech API on the
+// submitter's own device (no external STT/LLM service or API key involved),
+// and the case was really created from it. Logged here purely so this
+// intake channel shows up in the same activity feed as the others.
+export function logVoiceIntakeEvent({ instanceId, templateName, title, submittedBy, transcript, autoDetected }) {
+  const payload = {
+    type: "voice_note_transcription",
+    input_method: VOICE_INTAKE_SOURCE,
+    transcript,
+    auto_detected: autoDetected,
+    submitted_by: submittedBy,
+  };
+  return logEvent({
+    instanceId,
+    direction: "inbound",
+    eventType: "voice_intake",
+    target: VOICE_INTAKE_SOURCE,
+    summary: `Voice-drafted case from ${submittedBy}: "${title}" (${templateName})`,
     payload,
   });
 }

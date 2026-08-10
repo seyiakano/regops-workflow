@@ -1406,3 +1406,94 @@ input:disabled {
   background: var(--success-bg);
   color: var(--success);
 }
+.badge-event-voice_intake {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.badge-live {
+  background: var(--success-bg);
+  color: var(--success);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 10.5px;
+}
+
+.voice-intake-panel {
+  border-left: 3px solid var(--success);
+}
+
+.voice-intake-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.voice-intake-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.voice-intake-title {
+  font-weight: 600;
+  color: var(--text-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-record-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.btn-record {
+  background: var(--danger);
+  color: white;
+}
+.btn-record:hover {
+  background: var(--danger);
+  opacity: 0.9;
+}
+
+.recording-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 500;
+}
+.recording-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: recording-pulse 1.2s ease-in-out infinite;
+}
+@keyframes recording-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.voice-transcript-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  min-height: 48px;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+}
