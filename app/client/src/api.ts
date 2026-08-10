@@ -15,6 +15,8 @@ import type {
   TrendResult,
   CycleTimeMetrics,
   LaunchItem,
+  IntegrationEvent,
+  DeployTarget,
 } from "./types";
 import { getToken, clearToken, broadcastUnauthorized } from "./tokenStore";
 
@@ -110,6 +112,16 @@ export const api = {
       body: JSON.stringify(data),
     }),
   getNotificationCount: () => request<{ count: number }>("/api/notifications/count"),
+
+  listIntegrationEvents: (limit = 50) => request<IntegrationEvent[]>(`/api/integrations?limit=${limit}`),
+  getDeployTargets: () => request<Record<string, DeployTarget>>("/api/integrations/deploy-targets"),
+  simulateSlackNewCase: (data: {
+    template_id: string;
+    title: string;
+    content?: string;
+    figma_link?: string;
+    severity?: Severity;
+  }) => request<WorkflowInstance>("/api/integrations/slack/new-case", { method: "POST", body: JSON.stringify(data) }),
 
   getAudit: (filters: { from?: string; to?: string; template_id?: string; action?: string; q?: string }) => {
     const params = new URLSearchParams();

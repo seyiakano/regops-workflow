@@ -12,6 +12,7 @@ import { NotificationBell } from "./components/NotificationBell";
 import { LaunchReadinessBoard } from "./components/LaunchReadinessBoard";
 import { LaunchItemDetail } from "./components/LaunchItemDetail";
 import { BoardPackPage } from "./components/BoardPackPage";
+import { IntegrationsPage } from "./components/IntegrationsPage";
 import { useAuth } from "./auth";
 
 type View =
@@ -23,7 +24,8 @@ type View =
   | { name: "audit" }
   | { name: "governance" }
   | { name: "launch-item"; id: string }
-  | { name: "board-pack" };
+  | { name: "board-pack" }
+  | { name: "integrations" };
 
 function App() {
   const { user, loading } = useAuth();
@@ -90,6 +92,12 @@ function App() {
           <button className={view.name === "audit" ? "nav-active" : ""} onClick={() => setView({ name: "audit" })}>
             Audit Trail
           </button>
+          <button
+            className={view.name === "integrations" ? "nav-active" : ""}
+            onClick={() => setView({ name: "integrations" })}
+          >
+            Integrations
+          </button>
         </nav>
       </header>
 
@@ -118,6 +126,7 @@ function App() {
         )}
         {view.name === "board-pack" && <BoardPackPage onBack={() => setView({ name: "briefing" })} />}
         {view.name === "audit" && <AuditTrailPage />}
+        {view.name === "integrations" && <IntegrationsPage />}
       </main>
     </div>
   );

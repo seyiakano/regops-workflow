@@ -116,4 +116,21 @@ db.exec(`
     decided_at TEXT,
     FOREIGN KEY (launch_item_id) REFERENCES launch_items(id)
   );
+
+  -- Simulated external-system integration log (Slack + deploy-trigger
+  -- webhooks). No real Slack app or CI/CD credentials exist for this
+  -- prototype (see project memory: ask before wiring paid/keyed services) —
+  -- this table records the exact payload/contract that WOULD be sent so the
+  -- integration boundary is demonstrable without a live external system.
+  CREATE TABLE IF NOT EXISTS integration_events (
+    id TEXT PRIMARY KEY,
+    instance_id TEXT,
+    direction TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    target TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (instance_id) REFERENCES instances(id)
+  );
 `);

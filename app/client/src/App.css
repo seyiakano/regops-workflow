@@ -1302,3 +1302,107 @@ input:disabled {
     max-width: 100%;
   }
 }
+
+/* ---- Integrations ---- */
+
+.slack-intake-panel {
+  border-left: 3px solid var(--accent);
+}
+
+.slack-intake-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.slack-intake-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.slack-intake-title {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.integration-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.integration-event {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.integration-event-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.integration-event-target {
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+.integration-event p {
+  margin: 0 0 6px;
+}
+
+.integration-event details {
+  font-size: 13px;
+}
+
+.integration-event summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.integration-payload {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 8px;
+  overflow-x: auto;
+  font-size: 12px;
+}
+
+.badge-direction-inbound {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.badge-direction-outbound {
+  background: var(--border);
+  color: var(--text);
+}
+.badge-event-slack_notification {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.badge-event-slack_inbound {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.badge-event-deploy_trigger {
+  background: var(--success-bg);
+  color: var(--success);
+}

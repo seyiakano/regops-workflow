@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { db } from "./db.js";
+import { simulateLaunchReadyTrigger } from "./integrations.js";
 
 // Fixed standard gate set for every launch item — deliberately drawn from
 // the same 5-role vocabulary already seeded elsewhere (seed.js/seedUsers.js)
@@ -53,7 +54,19 @@ export function actionGate({ launchItemId, gateId, action, actor, comment }) {
   db.prepare(
     `UPDATE launch_gates SET status = ?, actor = ?, comment = ?, decided_at = ? WHERE id = ?`
   ).run(action, actor, comment ?? "", now(), gateId);
-  return recomputeStatus(launchItemId);
+
+  const before = db.prepare("SELECT status FROM launch_items WHERE id = ?").get(launchItemId);
+  const status = recomputeStatus(launchItemId);
+
+  // Fire the simulated "go live" deploy trigger only on the transition into
+  // ready (every gate approved) — not on every subsequent recompute, so a
+  // launch item that's already ready doesn't re-trigger the rollout webhook.
+  if (before?.status !== "ready" && status === "ready") {
+    const launchItem = db.prepare("SELECT * FROM launch_items WHERE id = ?").get(launchItemId);
+    simulateLaunchReadyTrigger({ launchItem });
+  }
+
+  return status;
 }
 
 export function serializeLaunchItem(row) {

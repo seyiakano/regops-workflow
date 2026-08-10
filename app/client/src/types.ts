@@ -231,6 +231,28 @@ export interface LaunchItem {
   days_until_launch: number;
 }
 
+export type IntegrationDirection = "inbound" | "outbound";
+export type IntegrationEventType = "slack_notification" | "slack_inbound" | "deploy_trigger";
+
+export interface IntegrationEvent {
+  id: string;
+  instance_id: string | null;
+  case_number: string | null;
+  case_title: string | null;
+  direction: IntegrationDirection;
+  event_type: IntegrationEventType;
+  target: string;
+  summary: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface DeployTarget {
+  system: string;
+  endpoint: string;
+  action: string;
+}
+
 export interface ExecutiveBriefing {
   generatedAt: string;
   executiveSummary: string[];

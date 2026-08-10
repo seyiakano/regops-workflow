@@ -13,6 +13,14 @@ import { queryAuditLog, getAuditSummary, buildAuditWorkbook } from "./auditRepor
 import { getDailyTrend } from "./statsTrend.js";
 import { getCycleTimeMetrics } from "./cycleTime.js";
 import { createLaunchItem, actionGate, serializeLaunchItem } from "./launchReadiness.js";
+import {
+  simulateSlackSubmitNotification,
+  simulateSlackDecisionNotification,
+  simulateDeployTrigger,
+  simulateSlackInboundCase,
+  listIntegrationEvents,
+  DEPLOY_TARGETS,
+} from "./integrations.js";
 import { createSession, destroySession, requireAuth, requireAdmin } from "./auth.js";
 import { seedTemplates } from "./seed.js";
 import { seedUsers } from "./seedUsers.js";
@@ -238,24 +246,26 @@ app.post("/api/instances/:id/attachments", upload.array("files", 10), (req, res)
 
 const VALID_SEVERITIES = new Set(["severe", "high", "low"]);
 
-app.post("/api/instances", (req, res) => {
-  const { template_id, title, content, figma_link, severity } = req.body;
-  if (!template_id || !title) {
-    return res.status(400).json({ error: "template_id and title are required" });
+// Shared by the normal submit route and the simulated Slack-intake route —
+// both create a case the same way and both get the same outbound Slack
+// "new case submitted" notification, since a real Slack integration
+// wouldn't behave differently depending on where the case came from.
+function createCase({ templateId, title, content, figmaLink, severity, submittedBy, viaSlack = false }) {
+  if (!templateId || !title) {
+    throw Object.assign(new Error("template_id and title are required"), { status: 400 });
   }
   if (severity && !VALID_SEVERITIES.has(severity)) {
-    return res.status(400).json({ error: "severity must be one of severe, high, low" });
+    throw Object.assign(new Error("severity must be one of severe, high, low"), { status: 400 });
   }
-  const template = db.prepare("SELECT * FROM workflow_templates WHERE id = ?").get(template_id);
-  if (!template) return res.status(404).json({ error: "Template not found" });
+  const template = db.prepare("SELECT * FROM workflow_templates WHERE id = ?").get(templateId);
+  if (!template) throw Object.assign(new Error("Template not found"), { status: 404 });
 
-  const submittedBy = req.user.name;
   const id = nanoid();
   const ts = now();
   db.prepare(
     `INSERT INTO instances (id, template_id, title, submitted_by, content, figma_link, severity, current_stage_index, status, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'in_progress', ?, ?)`
-  ).run(id, template_id, title, submittedBy, content ?? null, figma_link ?? null, severity ?? null, ts, ts);
+  ).run(id, templateId, title, submittedBy, content ?? null, figmaLink ?? null, severity ?? null, ts, ts);
 
   const stages = JSON.parse(template.stages);
   db.prepare(
@@ -263,7 +273,27 @@ app.post("/api/instances", (req, res) => {
      VALUES (?, ?, ?, ?, 'submit', ?, ?)`
   ).run(nanoid(), id, stages[0]?.name ?? null, submittedBy, `Submitted for review: ${title}`, ts);
 
-  res.status(201).json(serializeInstance(db.prepare("SELECT rowid, * FROM instances WHERE id = ?").get(id)));
+  const row = db.prepare("SELECT rowid, * FROM instances WHERE id = ?").get(id);
+  const instance = serializeInstance(row);
+  simulateSlackSubmitNotification({ instance: row, templateName: template.name, caseNumber: instance.case_number, viaSlack });
+  return instance;
+}
+
+app.post("/api/instances", (req, res) => {
+  const { template_id, title, content, figma_link, severity } = req.body;
+  try {
+    const instance = createCase({
+      templateId: template_id,
+      title,
+      content,
+      figmaLink: figma_link,
+      severity,
+      submittedBy: req.user.name,
+    });
+    res.status(201).json(instance);
+  } catch (e) {
+    res.status(e.status ?? 500).json({ error: e.message });
+  }
 });
 
 const VALID_ACTIONS = new Set(["approve", "reject", "return"]);
@@ -325,7 +355,27 @@ app.post("/api/instances/:id/action", (req, res) => {
      VALUES (?, ?, ?, ?, ?, ?, ?)`
   ).run(nanoid(), instance.id, currentStage?.name ?? null, actor, action, comment ?? "", ts);
 
-  res.json(serializeInstance(db.prepare("SELECT rowid, * FROM instances WHERE id = ?").get(instance.id)));
+  const updatedRow = db.prepare("SELECT rowid, * FROM instances WHERE id = ?").get(instance.id);
+  const serialized = serializeInstance(updatedRow);
+
+  // A case is "complete" the moment it leaves in_progress — that's the
+  // signal point for both the Slack decision notification and (on approval
+  // only) the simulated push-to-production trigger, since only an approval
+  // means "ship it."
+  if (nextStatus !== "in_progress") {
+    simulateSlackDecisionNotification({
+      instance: updatedRow,
+      templateName: template.name,
+      caseNumber: serialized.case_number,
+      status: nextStatus,
+      actor,
+    });
+    if (nextStatus === "approved") {
+      simulateDeployTrigger({ instance: updatedRow, templateName: template.name, caseNumber: serialized.case_number });
+    }
+  }
+
+  res.json(serialized);
 });
 
 // ---- Notifications ----
@@ -343,6 +393,46 @@ app.get("/api/notifications/count", (req, res) => {
     if (stages[r.current_stage_index]?.approverRole === req.user.approver_role) count++;
   }
   res.json({ count });
+});
+
+// ---- Integrations (simulated Slack + deploy triggers, see ./integrations.js) ----
+
+app.get("/api/integrations", (req, res) => {
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 100);
+  res.json(listIntegrationEvents({ limit }));
+});
+
+app.get("/api/integrations/deploy-targets", (req, res) => {
+  res.json(DEPLOY_TARGETS);
+});
+
+// Simulates what a Slack slash-command ("/regops new-case") or modal
+// submission would deliver to a webhook — same case-creation path as the
+// web form, plus a logged inbound event showing the payload Slack would
+// actually send. No real Slack app is connected (see ./integrations.js).
+app.post("/api/integrations/slack/new-case", (req, res) => {
+  const { template_id, title, content, figma_link, severity } = req.body;
+  try {
+    const template = db.prepare("SELECT name FROM workflow_templates WHERE id = ?").get(template_id);
+    const instance = createCase({
+      templateId: template_id,
+      title,
+      content,
+      figmaLink: figma_link,
+      severity,
+      submittedBy: req.user.name,
+      viaSlack: true,
+    });
+    simulateSlackInboundCase({
+      instanceId: instance.id,
+      templateName: template?.name ?? "Unknown",
+      title,
+      slackUser: req.user.name,
+    });
+    res.status(201).json(instance);
+  } catch (e) {
+    res.status(e.status ?? 500).json({ error: e.message });
+  }
 });
 
 // ---- Reviewer board stats ----
