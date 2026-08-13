@@ -147,3 +147,31 @@ const hasStagesJson = db
 if (!hasStagesJson) {
   db.exec("ALTER TABLE instances ADD COLUMN stages_json TEXT");
 }
+
+// Per-case SLA target, defaulting to 24h/stage — see dynamicRouting-style
+// ALTER-if-missing pattern above. "Time in current stage" is derived from
+// instances.updated_at at read time rather than stored, since updated_at is
+// already the exact moment the case entered its current stage (see the
+// /action route) and resubmitting after a revision naturally resets it.
+const hasSlaTargetHours = db
+  .prepare("SELECT 1 FROM pragma_table_info('instances') WHERE name = 'sla_target_hours'")
+  .get();
+if (!hasSlaTargetHours) {
+  db.exec("ALTER TABLE instances ADD COLUMN sla_target_hours INTEGER NOT NULL DEFAULT 24");
+}
+
+// Revision loop (Feature 4) — request-info-style return to the submitter,
+// distinct from the existing stage-by-stage "return" action: always goes to
+// the submitter regardless of stage, requires a reason, and remembers which
+// stage to resume at (and resets that stage's SLA clock) on resubmission.
+const hasRevisionReason = db
+  .prepare("SELECT 1 FROM pragma_table_info('instances') WHERE name = 'revision_reason'")
+  .get();
+if (!hasRevisionReason) {
+  db.exec(`
+    ALTER TABLE instances ADD COLUMN revision_reason TEXT;
+    ALTER TABLE instances ADD COLUMN revision_requested_by TEXT;
+    ALTER TABLE instances ADD COLUMN revision_requested_at TEXT;
+    ALTER TABLE instances ADD COLUMN revision_target_stage_index INTEGER;
+  `);
+}

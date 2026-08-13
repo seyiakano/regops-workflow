@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { CaseStats, InstanceStatus, WorkflowInstance } from "../types";
 import { StatusBadge } from "./StatusBadge";
+import { SlaBadge } from "./SlaBadge";
 
 const STATUS_TABS: { label: string; value: InstanceStatus | "" }[] = [
   { label: "All", value: "" },
   { label: "Pending", value: "in_progress" },
+  { label: "Revision required", value: "revision_required" },
   { label: "Approved", value: "approved" },
   { label: "Rejected", value: "rejected" },
   { label: "Returned", value: "returned_to_submitter" },
@@ -27,6 +29,7 @@ export function ReviewerBoard({ onOpenInstance }: { onOpenInstance: (id: string)
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
   const [period, setPeriod] = useState("week");
+  const [sortBySla, setSortBySla] = useState(false);
   const [stats, setStats] = useState<CaseStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +59,13 @@ export function ReviewerBoard({ onOpenInstance }: { onOpenInstance: (id: string)
 
   const page = Math.floor(offset / PAGE_SIZE) + 1;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const displayedInstances = sortBySla
+    ? [...instances].sort((a, b) => {
+        const pctA = a.hours_in_stage != null ? a.hours_in_stage / a.sla_target_hours : -Infinity;
+        const pctB = b.hours_in_stage != null ? b.hours_in_stage / b.sla_target_hours : -Infinity;
+        return pctB - pctA;
+      })
+    : instances;
 
   return (
     <div className="page">
@@ -86,6 +96,10 @@ export function ReviewerBoard({ onOpenInstance }: { onOpenInstance: (id: string)
             </button>
           ))}
         </div>
+        <label className="sla-sort-toggle">
+          <input type="checkbox" checked={sortBySla} onChange={(e) => setSortBySla(e.target.checked)} />
+          Sort by closest to SLA breach
+        </label>
 
         {error && <p className="error">{error}</p>}
         {loading ? (
@@ -95,12 +109,17 @@ export function ReviewerBoard({ onOpenInstance }: { onOpenInstance: (id: string)
         ) : (
           <>
             <div className="case-grid">
-              {instances.map((inst) => (
+              {displayedInstances.map((inst) => (
                 <button key={inst.id} className="case-card" onClick={() => onOpenInstance(inst.id)}>
                   <div className="case-card-header">
                     <span className="case-number">{inst.case_number}</span>
                     <StatusBadge status={inst.status} />
                   </div>
+                  {inst.sla_status && (
+                    <div className="case-card-sla">
+                      <SlaBadge status={inst.sla_status} hoursInStage={inst.hours_in_stage} />
+                    </div>
+                  )}
                   <div className="case-card-title">{inst.title}</div>
                   <dl className="case-card-fields">
                     <dt>Uploader</dt>

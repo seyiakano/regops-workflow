@@ -52,7 +52,7 @@ export function queryAuditLog(filters) {
   const { where, params } = buildAuditQuery(filters);
   const rows = db
     .prepare(
-      `SELECT audit_log.id, audit_log.stage_name, audit_log.actor, audit_log.action, audit_log.comment,
+      `SELECT audit_log.id, audit_log.instance_id, audit_log.stage_name, audit_log.actor, audit_log.action, audit_log.comment,
               audit_log.created_at,
               instances.rowid as instance_rowid, instances.title as case_title,
               workflow_templates.name as template_name

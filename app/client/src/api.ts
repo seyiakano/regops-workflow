@@ -88,6 +88,15 @@ export const api = {
   }) => request<WorkflowInstance>("/api/instances", { method: "POST", body: JSON.stringify(data) }),
   actionInstance: (id: string, data: { action: string; comment?: string }) =>
     request<WorkflowInstance>(`/api/instances/${id}/action`, { method: "POST", body: JSON.stringify(data) }),
+  requestRevision: (id: string, reason: string) =>
+    request<WorkflowInstance>(`/api/instances/${id}/request-revision`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
+  resubmitInstance: (
+    id: string,
+    data: { title?: string; content?: string; figma_link?: string; comment?: string }
+  ) => request<WorkflowInstance>(`/api/instances/${id}/resubmit`, { method: "POST", body: JSON.stringify(data) }),
   runAiReview: (id: string) => request<AiReview>(`/api/instances/${id}/ai-review`, { method: "POST" }),
   escalateInstance: (id: string, hoursInStage?: number) =>
     request<{ id: string }>(`/api/instances/${id}/escalate`, {
@@ -168,6 +177,38 @@ export const api = {
     const disposition = res.headers.get("Content-Disposition") ?? "";
     const match = disposition.match(/filename="(.+)"/);
     const filename = match?.[1] ?? "regops-audit-export.xlsx";
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
+  downloadAuditCsv: async (filters: {
+    from?: string;
+    to?: string;
+    template_id?: string;
+    action?: string;
+    q?: string;
+    lod?: string;
+  }) => {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(filters)) if (v) params.set(k, v);
+    const res = await fetch(`/api/audit/export.csv?${params.toString()}`, { headers: authHeaders() });
+    if (res.status === 401) {
+      clearToken();
+      broadcastUnauthorized();
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(body.error ?? `Request failed: ${res.status}`);
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    const match = disposition.match(/filename="(.+)"/);
+    const filename = match?.[1] ?? "regops-audit-export.csv";
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

@@ -1606,3 +1606,119 @@ input:disabled {
   margin-bottom: 12px;
   white-space: pre-wrap;
 }
+
+/* ---- SLA / ageing clock ---- */
+.badge-sla-on_track {
+  background: var(--success-bg);
+  color: var(--success);
+}
+.badge-sla-at_risk {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.badge-sla-breached {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.case-card-sla {
+  margin: -4px 0 6px;
+}
+.sla-sort-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 8px 0 4px;
+  cursor: pointer;
+}
+.sla-sort-toggle input {
+  width: auto;
+}
+
+/* ---- Compliance pre-submission checklist ---- */
+.compliance-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--bg);
+}
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  flex-direction: row !important;
+}
+.checklist-item input {
+  width: auto;
+}
+.checklist-hint {
+  font-size: 12.5px;
+  margin-top: -4px;
+}
+
+/* ---- Revision loop ---- */
+.badge-revision_required {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.badge-action-request_revision {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.badge-action-resubmit {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.revision-banner {
+  border: 1px solid var(--warn);
+  background: var(--warn-bg);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 14px 0;
+}
+.revision-banner h3 {
+  margin: 0 0 6px;
+}
+.revision-reason {
+  font-style: italic;
+  margin: 4px 0 12px;
+}
+.resubmit-form {
+  margin-top: 8px;
+}
+
+/* ---- Modal (Request Revision) ---- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.modal-card {
+  background: var(--panel-bg);
+  border-radius: 12px;
+  padding: 20px;
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+.modal-card h3 {
+  margin: 0;
+}
+
+.panel-header-actions {
+  display: flex;
+  gap: 8px;
+}

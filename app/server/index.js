@@ -10,6 +10,7 @@ import { db } from "./db.js";
 import { runFinancialPromotionsReview, runAssetListingReview } from "./aiReview.js";
 import { generateExecutiveBriefing } from "./executiveBriefing.js";
 import { queryAuditLog, getAuditSummary, buildAuditWorkbook } from "./auditReport.js";
+import { buildAuditCsv } from "./csvExport.js";
 import { getDailyTrend } from "./statsTrend.js";
 import { getCycleTimeMetrics } from "./cycleTime.js";
 import { createLaunchItem, actionGate, serializeLaunchItem } from "./launchReadiness.js";
@@ -167,6 +168,20 @@ function caseNumber(rowid) {
   return `CASE-${String(rowid).padStart(6, "0")}`;
 }
 
+// SLA/ageing clock (Feature 1) — "time in current stage" is always derived
+// from updated_at, never stored separately, so a resubmit-after-revision
+// (which bumps updated_at) resets the clock for free with no extra logic.
+function computeSlaFields(row) {
+  if (row.status !== "in_progress") {
+    return { sla_target_hours: row.sla_target_hours, hours_in_stage: null, sla_status: null };
+  }
+  const target = row.sla_target_hours ?? 24;
+  const hoursInStage = (Date.now() - new Date(row.updated_at).getTime()) / (1000 * 60 * 60);
+  const pct = hoursInStage / target;
+  const sla_status = pct > 1 ? "breached" : pct >= 0.75 ? "at_risk" : "on_track";
+  return { sla_target_hours: target, hours_in_stage: Math.round(hoursInStage * 10) / 10, sla_status };
+}
+
 function serializeInstance(row) {
   const template = serializeTemplate(db.prepare("SELECT * FROM workflow_templates WHERE id = ?").get(row.template_id));
   // A case's actual stage chain is whatever was snapshotted for it at
@@ -180,6 +195,7 @@ function serializeInstance(row) {
     template_name: template.name,
     stages,
     current_stage: stage,
+    ...computeSlaFields(row),
   };
 }
 
@@ -412,6 +428,90 @@ app.post("/api/instances/:id/action", (req, res) => {
   res.json(serialized);
 });
 
+// Revision loop (Feature 4) — distinct from "return": always routes back to
+// the submitter regardless of stage, requires a reason, and remembers which
+// stage to resume at on resubmission. Only these three approver roles get
+// this action (matches j.reviewer/m.compliance/l.counsel in the spec).
+const REVISION_ROLES = new Set(["Manager", "Compliance", "Legal"]);
+
+app.post("/api/instances/:id/request-revision", (req, res) => {
+  const { reason } = req.body ?? {};
+  if (!reason || !reason.trim()) {
+    return res.status(400).json({ error: "A revision reason is required" });
+  }
+  const instance = db.prepare("SELECT * FROM instances WHERE id = ?").get(req.params.id);
+  if (!instance) return res.status(404).json({ error: "Instance not found" });
+  if (instance.status !== "in_progress") {
+    return res.status(409).json({ error: `Instance is already ${instance.status} and cannot be actioned` });
+  }
+
+  const template = db.prepare("SELECT * FROM workflow_templates WHERE id = ?").get(instance.template_id);
+  const stages = instance.stages_json ? JSON.parse(instance.stages_json) : JSON.parse(template.stages);
+  const currentStage = stages[instance.current_stage_index];
+
+  if (!REVISION_ROLES.has(req.user.approver_role) || req.user.approver_role !== currentStage?.approverRole) {
+    return res.status(403).json({
+      error: `Only the ${currentStage?.approverRole} approver on this stage can request a revision.`,
+    });
+  }
+  // Same segregation-of-duties guard as approve/reject/return.
+  if (req.user.name === instance.submitted_by) {
+    return res.status(403).json({
+      error: "You submitted this case yourself — a different approver is required (segregation of duties).",
+    });
+  }
+
+  const ts = now();
+  db.prepare(
+    `UPDATE instances SET status = 'revision_required', revision_reason = ?, revision_requested_by = ?,
+     revision_requested_at = ?, revision_target_stage_index = ?, updated_at = ? WHERE id = ?`
+  ).run(reason.trim(), req.user.name, ts, instance.current_stage_index, ts, instance.id);
+
+  db.prepare(
+    `INSERT INTO audit_log (id, instance_id, stage_name, actor, action, comment, created_at)
+     VALUES (?, ?, ?, ?, 'request_revision', ?, ?)`
+  ).run(nanoid(), instance.id, currentStage?.name ?? null, req.user.name, reason.trim(), ts);
+
+  res.json(serializeInstance(db.prepare("SELECT rowid, * FROM instances WHERE id = ?").get(instance.id)));
+});
+
+app.post("/api/instances/:id/resubmit", (req, res) => {
+  const { title, content, figma_link, comment } = req.body ?? {};
+  const instance = db.prepare("SELECT * FROM instances WHERE id = ?").get(req.params.id);
+  if (!instance) return res.status(404).json({ error: "Instance not found" });
+  if (instance.status !== "revision_required") {
+    return res.status(409).json({ error: "This case has no pending revision request" });
+  }
+  // Only the original submitter can resubmit — this is their revision loop.
+  if (req.user.name !== instance.submitted_by) {
+    return res.status(403).json({ error: "Only the original submitter can resubmit this case." });
+  }
+
+  const ts = now();
+  db.prepare(
+    `UPDATE instances SET status = 'in_progress', current_stage_index = ?, title = ?, content = ?, figma_link = ?,
+     updated_at = ? WHERE id = ?`
+  ).run(
+    instance.revision_target_stage_index ?? instance.current_stage_index,
+    title ?? instance.title,
+    content ?? instance.content,
+    figma_link ?? instance.figma_link,
+    ts,
+    instance.id
+  );
+
+  const template = db.prepare("SELECT * FROM workflow_templates WHERE id = ?").get(instance.template_id);
+  const stages = instance.stages_json ? JSON.parse(instance.stages_json) : JSON.parse(template.stages);
+  const resumeStage = stages[instance.revision_target_stage_index ?? instance.current_stage_index];
+
+  db.prepare(
+    `INSERT INTO audit_log (id, instance_id, stage_name, actor, action, comment, created_at)
+     VALUES (?, ?, ?, ?, 'resubmit', ?, ?)`
+  ).run(nanoid(), instance.id, resumeStage?.name ?? null, req.user.name, comment ?? "Resubmitted after revision", ts);
+
+  res.json(serializeInstance(db.prepare("SELECT rowid, * FROM instances WHERE id = ?").get(instance.id)));
+});
+
 // Simulated SLA-breach escalation — no real paging/notification system is
 // wired up (see ./integrations.js's simulation contract), so this logs what
 // the notice to 2LoD Leadership would contain rather than sending one.
@@ -587,6 +687,17 @@ app.get("/api/audit/export", async (req, res) => {
   res.setHeader("Content-Disposition", `attachment; filename="regops-audit-export-${now().slice(0, 10)}.xlsx"`);
   await workbook.xlsx.write(res);
   res.end();
+});
+
+// Structured CSV audit export (Feature 3) — surfaced on the client only to
+// Executive/Legal approvers, but not role-gated here since it's read-only
+// and shares the same filters as the existing Excel export.
+app.get("/api/audit/export.csv", (req, res) => {
+  const { from, to, template_id, action, q, lod } = req.query;
+  const csv = buildAuditCsv({ from, to, template_id, action, q, lod });
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename="regops-audit-export-${now().slice(0, 10)}.csv"`);
+  res.send(csv);
 });
 
 // ---- AI-assisted review (stubbed — see ./aiReview.js) ----

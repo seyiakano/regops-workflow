@@ -11,8 +11,14 @@ export interface WorkflowTemplate {
   created_at: string;
 }
 
-export type InstanceStatus = "in_progress" | "approved" | "rejected" | "returned_to_submitter";
+export type InstanceStatus =
+  | "in_progress"
+  | "approved"
+  | "rejected"
+  | "returned_to_submitter"
+  | "revision_required";
 export type Severity = "severe" | "high" | "low";
+export type SlaStatus = "on_track" | "at_risk" | "breached";
 
 export interface User {
   id: string;
@@ -55,6 +61,13 @@ export interface WorkflowInstance {
   current_stage: Stage | null;
   created_at: string;
   updated_at: string;
+  sla_target_hours: number;
+  hours_in_stage: number | null;
+  sla_status: SlaStatus | null;
+  revision_reason: string | null;
+  revision_requested_by: string | null;
+  revision_requested_at: string | null;
+  revision_target_stage_index: number | null;
 }
 
 export interface AuditLogEntry {

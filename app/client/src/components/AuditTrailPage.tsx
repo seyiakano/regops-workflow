@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { AuditRow, AuditSummary, WorkflowTemplate } from "../types";
 import { formatUkTimestamp } from "../formatters";
+import { useAuth } from "../auth";
+
+const CSV_EXPORT_ROLES = new Set(["Executive", "Legal"]);
 
 const ACTION_OPTIONS = [
   { value: "", label: "All actions" },
@@ -19,6 +22,8 @@ const LOD_OPTIONS = [
 ];
 
 export function AuditTrailPage() {
+  const { user } = useAuth();
+  const canExportCsv = !!user?.approver_role && CSV_EXPORT_ROLES.has(user.approver_role);
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -30,6 +35,7 @@ export function AuditTrailPage() {
   const [summary, setSummary] = useState<AuditSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const filters = {
@@ -77,14 +83,33 @@ export function AuditTrailPage() {
     }
   }
 
+  async function handleExportCsv() {
+    setExportingCsv(true);
+    setError(null);
+    try {
+      await api.downloadAuditCsv(filters);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setExportingCsv(false);
+    }
+  }
+
   return (
     <div className="page">
       <section className="panel">
         <div className="panel-header">
           <h2>Audit Trail</h2>
-          <button className="btn-primary" onClick={handleExport} disabled={exporting}>
-            {exporting ? "Exporting…" : "Export to Excel"}
-          </button>
+          <div className="panel-header-actions">
+            {canExportCsv && (
+              <button className="btn-secondary" onClick={handleExportCsv} disabled={exportingCsv}>
+                {exportingCsv ? "Exporting…" : "Export Audit Log (CSV)"}
+              </button>
+            )}
+            <button className="btn-primary" onClick={handleExport} disabled={exporting}>
+              {exporting ? "Exporting…" : "Export to Excel"}
+            </button>
+          </div>
         </div>
         <p className="muted">
           Every submit, approve, reject, return, and AI-review action across all cases — filter it here, or export

@@ -25,6 +25,8 @@ export function StartProcessForm({
   const [error, setError] = useState<string | null>(null);
   const [lastCreated, setLastCreated] = useState<WorkflowInstance | null>(null);
   const [precheck, setPrecheck] = useState<FcaPrecheckResult | null>(null);
+  const [checklist, setChecklist] = useState({ disclosures: false, targetMarket: false, jurisdiction: false });
+  const checklistComplete = checklist.disclosures && checklist.targetMarket && checklist.jurisdiction;
 
   const selectedTemplate = templates.find((t) => t.id === templateId);
   const isFinancialPromotion = selectedTemplate?.name === "Financial Promotion Review";
@@ -64,6 +66,7 @@ export function StartProcessForm({
       setSeverity("");
       setFiles([]);
       setPrecheck(null);
+      setChecklist({ disclosures: false, targetMarket: false, jurisdiction: false });
       onCreated();
     } catch (e) {
       setError((e as Error).message);
@@ -254,9 +257,45 @@ export function StartProcessForm({
               </select>
             </label>
 
-            <button type="submit" className="btn-primary" disabled={submitting}>
+            <div className="compliance-checklist">
+              <span className="step-label">Compliance Pre-Checklist</span>
+              <label className="checklist-item">
+                <input
+                  type="checkbox"
+                  checked={checklist.disclosures}
+                  onChange={(e) => setChecklist({ ...checklist, disclosures: e.target.checked })}
+                />
+                Financial Promotions / Risk Disclosures Attached
+              </label>
+              <label className="checklist-item">
+                <input
+                  type="checkbox"
+                  checked={checklist.targetMarket}
+                  onChange={(e) => setChecklist({ ...checklist, targetMarket: e.target.checked })}
+                />
+                Target Market Classification Confirmed
+              </label>
+              <label className="checklist-item">
+                <input
+                  type="checkbox"
+                  checked={checklist.jurisdiction}
+                  onChange={(e) => setChecklist({ ...checklist, jurisdiction: e.target.checked })}
+                />
+                Jurisdictional Scope Verification Completed
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={submitting || !checklistComplete}
+              title={checklistComplete ? undefined : "Complete the Compliance Pre-Checklist above before submitting"}
+            >
               {submitting ? "Starting…" : "Start Process"}
             </button>
+            {!checklistComplete && (
+              <p className="muted checklist-hint">Complete the checklist above to enable submission.</p>
+            )}
           </>
         )}
       </form>

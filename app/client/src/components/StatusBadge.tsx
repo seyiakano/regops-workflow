@@ -5,6 +5,7 @@ const LABELS: Record<InstanceStatus, string> = {
   approved: "Approved",
   rejected: "Rejected",
   returned_to_submitter: "Returned",
+  revision_required: "Revision Required",
 };
 
 export function StatusBadge({ status }: { status: InstanceStatus }) {

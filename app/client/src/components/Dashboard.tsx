@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { WorkflowInstance, WorkflowTemplate } from "../types";
 import { StatusBadge } from "./StatusBadge";
+import { SlaBadge } from "./SlaBadge";
 import { StartProcessForm } from "./StartProcessForm";
 
 const PAGE_SIZE = 10;
@@ -71,6 +72,7 @@ export function Dashboard({ onOpenInstance }: { onOpenInstance: (id: string) => 
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
               <option value="returned_to_submitter">Returned to submitter</option>
+              <option value="revision_required">Revision required</option>
             </select>
           </div>
         </div>
@@ -90,6 +92,7 @@ export function Dashboard({ onOpenInstance }: { onOpenInstance: (id: string) => 
                     <th>Process Type</th>
                     <th>Current stage</th>
                     <th>Status</th>
+                    <th>SLA</th>
                     <th>Submitted by</th>
                     <th>Updated</th>
                   </tr>
@@ -103,6 +106,9 @@ export function Dashboard({ onOpenInstance }: { onOpenInstance: (id: string) => 
                       <td>{inst.current_stage?.name ?? "—"}</td>
                       <td>
                         <StatusBadge status={inst.status} />
+                      </td>
+                      <td>
+                        <SlaBadge status={inst.sla_status} hoursInStage={inst.hours_in_stage} />
                       </td>
                       <td>{inst.submitted_by}</td>
                       <td>{new Date(inst.updated_at).toLocaleString()}</td>
